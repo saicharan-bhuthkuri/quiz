@@ -412,9 +412,6 @@ export function renderAdminDashboardView(
                   <button id="btn-events-refresh" class="btn btn-secondary btn-pill" title="Refresh Events">
                     <span>${icon('RefreshCw', 14)} Refresh</span>
                   </button>
-                  <button id="btn-open-create-event-modal" class="btn btn-primary btn-pill" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%);">
-                    <span>${icon('Plus', 15)} Create Event</span>
-                  </button>
                 </div>
               </div>
 

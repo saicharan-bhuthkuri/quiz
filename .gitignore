@@ -25,6 +25,7 @@ yarn-error.log*
 pnpm-debug.log*
 
 # Editor and OS files
+.firebase/
 .vscode/
 .idea/
 *.suo

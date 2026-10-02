@@ -3,7 +3,6 @@ import { soundEngine } from '../components/AudioEffects.ts';
 import { getLoggedInUser } from '../auth.ts';
 import { showToast } from '../components/Toast.ts';
 import { wsClient } from '../services/wsClient.ts';
-import { LeaderboardEntry } from '../api/client.ts';
 import { launchConfetti } from '../components/Confetti.ts';
 
 export function renderLiveEventQuizView(
@@ -20,7 +19,13 @@ export function renderLiveEventQuizView(
 
   // State
   let eventTitle = 'Live Engineering Event';
-  let eventStatus: 'UPCOMING' | 'LOBBY' | 'QUESTION_ACTIVE' | 'QUESTION_ENDED' | 'EVENT_ENDED' = 'LOBBY';
+  let eventStatus:
+    | 'UPCOMING'
+    | 'EVENT_STARTED_WAITING_QUESTION'
+    | 'LOBBY'
+    | 'QUESTION_ACTIVE'
+    | 'QUESTION_ENDED'
+    | 'EVENT_ENDED' = 'LOBBY';
   let currentQuestion: any = null;
   let currentQuestionIdx = -1;
   let totalQuestions = 5;
@@ -28,10 +33,27 @@ export function renderLiveEventQuizView(
   let totalQuestionSeconds = 30;
   let hasAnsweredCurrent = false;
   let selectedOptionIdx: number | null = null;
-  let myScore = 0;
-  let myCorrectCount = 0;
-  let currentLeaderboard: LeaderboardEntry[] = [];
   let questionStartTime = Date.now();
+
+  function getStatusBadgeText(): string {
+    switch (eventStatus) {
+      case 'UPCOMING':
+        return 'Registered — Waiting for Host';
+      case 'EVENT_STARTED_WAITING_QUESTION':
+      case 'LOBBY':
+        return 'Event Started — Waiting for Next Question';
+      case 'QUESTION_ACTIVE':
+        return hasAnsweredCurrent
+          ? 'Answer Submitted — Waiting for Next Question'
+          : `Question ${currentQuestionIdx + 1} of ${totalQuestions}`;
+      case 'QUESTION_ENDED':
+        return 'Question Ended — Waiting for Next Question';
+      case 'EVENT_ENDED':
+        return 'Event Completed — Thank You';
+      default:
+        return 'Connected (WebSocket Active)';
+    }
+  }
 
   function renderView() {
     container.innerHTML = `
@@ -48,9 +70,9 @@ export function renderLiveEventQuizView(
               <h2 class="live-event-heading">${escapeHtml(eventTitle)}</h2>
             </div>
 
-            <div class="live-score-pill">
-              <span class="score-icon">${icon('Zap', 14)}</span>
-              <span class="score-text">My Score: <strong id="live-user-score">${myScore}</strong> (<span id="live-user-correct">${myCorrectCount}</span> correct)</span>
+            <div class="live-status-pill">
+              <span class="pulse-dot"></span>
+              <span class="live-status-pill-text" id="live-header-status-text">${getStatusBadgeText()}</span>
             </div>
           </div>
         </header>
@@ -71,22 +93,59 @@ export function renderLiveEventQuizView(
   }
 
   function renderCurrentStateBody(): string {
-    if (params.viewLeaderboardOnly || eventStatus === 'EVENT_ENDED') {
-      return renderFinalLeaderboard();
+    // Phase 8: Admin Ends Event -> Participant screen changes to "Event Completed — Thank You for Participating"
+    if (eventStatus === 'EVENT_ENDED') {
+      return `
+        <div class="live-completed-card">
+          <div class="completed-icon-ring">
+            <span class="completed-icon">${icon('CheckCircle2', 48)}</span>
+          </div>
+
+          <span class="completed-badge-pill">COMPETITION CONCLUDED</span>
+          <h1 class="completed-title">Event Completed — Thank You for Participating</h1>
+          <p class="completed-desc">
+            Your responses have been successfully recorded and submitted to the evaluation engine.
+            The administrator has concluded the competition. Thank you for your active participation!
+          </p>
+
+          <div class="lobby-status-box" style="max-width: 480px; margin: 0 auto 2rem;">
+            <div class="status-item">
+              <span class="item-label">${icon('User', 13)} Participant</span>
+              <span class="item-val">${escapeHtml(user.name)}</span>
+            </div>
+            <div class="status-divider"></div>
+            <div class="status-item">
+              <span class="item-label">${icon('Check', 13)} Submission Status</span>
+              <span class="item-val" style="color: #16a34a; font-weight: 700;">Recorded Successfully</span>
+            </div>
+          </div>
+
+          <div class="completed-action-row">
+            <button id="btn-return-events" class="btn btn-primary btn-pill" style="padding: 0.85rem 2rem; font-weight: 700;">
+              <span>Return to Events Arena</span>
+              ${icon('ArrowRight', 14)}
+            </button>
+          </div>
+        </div>
+      `;
     }
 
-    if (eventStatus === 'LOBBY' || eventStatus === 'UPCOMING') {
+    // Phase 1: Before Admin Starts -> "Registered — Waiting for Host"
+    if (eventStatus === 'UPCOMING') {
       return `
         <div class="live-lobby-card">
           <div class="lobby-radar-ring">
             <div class="radar-pulse"></div>
-            <span class="radar-icon">${icon('Radio', 32)}</span>
+            <span class="radar-icon">${icon('Clock', 32)}</span>
           </div>
 
-          <span class="lobby-badge-pill">COMPETITION WAITING LOBBY</span>
-          <h1 class="lobby-title">Waiting for Host to Start Event</h1>
+          <span class="lobby-badge-pill" style="background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border-color: #64748b;">
+            UPCOMING EVENT
+          </span>
+          <h1 class="lobby-title">Registered — Waiting for Host</h1>
           <p class="lobby-desc">
-            You are officially registered and connected via real-time WebSocket. As soon as the administrator presses <strong>"Start Event"</strong>, Question 1 will appear simultaneously for all participants.
+            You are officially registered for this event. Please wait for the host to start the competition.
+            Questions will not be visible until the administrator broadcasts them.
           </p>
 
           <div class="lobby-status-box">
@@ -99,28 +158,80 @@ export function renderLiveEventQuizView(
               <span class="item-label">${icon('User', 13)} Participant</span>
               <span class="item-val">${escapeHtml(user.name)}</span>
             </div>
+            <div class="status-divider"></div>
+            <div class="status-item">
+              <span class="item-label">${icon('Shield', 13)} Status</span>
+              <span class="item-val" style="color: #38bdf8; font-weight: 700;">Waiting for Host</span>
+            </div>
           </div>
 
           <div class="lobby-rules-strip">
-            <span>${icon('Clock', 13)} Automatic server countdown timers</span>
-            <span>${icon('Zap', 13)} Speed bonus for fast correct answers</span>
-            <span>${icon('Shield', 13)} Seamless auto-reconnect</span>
+            <span>${icon('Radio', 13)} Automatic server synchronization</span>
+            <span>${icon('Lock', 13)} Responses encrypted & recorded securely</span>
+            <span>${icon('Wifi', 13)} Seamless auto-reconnect</span>
           </div>
         </div>
       `;
     }
 
+    // Phase 2: Admin Starts Event -> "Event Started — Waiting for Next Question"
+    // (Do NOT immediately show a question)
+    if (eventStatus === 'EVENT_STARTED_WAITING_QUESTION' || eventStatus === 'LOBBY') {
+      return `
+        <div class="live-lobby-card">
+          <div class="lobby-radar-ring" style="border-color: #22c55e; background: rgba(34, 197, 94, 0.15);">
+            <div class="radar-pulse" style="border-color: rgba(34, 197, 94, 0.6);"></div>
+            <span class="radar-icon" style="color: #4ade80;">${icon('Radio', 32)}</span>
+          </div>
+
+          <span class="lobby-badge-pill" style="background: rgba(34, 197, 94, 0.2); color: #86efac; border-color: rgba(34, 197, 94, 0.4);">
+            ● LIVE IN PROGRESS
+          </span>
+          <h1 class="lobby-title">Event Started — Waiting for Next Question</h1>
+          <p class="lobby-desc">
+            The administrator has started the event! Stand by, the question will appear simultaneously
+            on your screen as soon as the host broadcasts it.
+          </p>
+
+          <div class="lobby-status-box">
+            <div class="status-item">
+              <span class="item-label">${icon('Wifi', 13)} Live Stream</span>
+              <span class="item-val" style="color: #16a34a; font-weight: 700;">● Active & Ready</span>
+            </div>
+            <div class="status-divider"></div>
+            <div class="status-item">
+              <span class="item-label">${icon('User', 13)} Participant</span>
+              <span class="item-val">${escapeHtml(user.name)}</span>
+            </div>
+            <div class="status-divider"></div>
+            <div class="status-item">
+              <span class="item-label">${icon('Clock', 13)} Current Step</span>
+              <span class="item-val" style="color: #fbbf24; font-weight: 700;">Waiting for Next Question</span>
+            </div>
+          </div>
+
+          <div class="lobby-rules-strip">
+            <span>${icon('Clock', 13)} Synchronized server timer</span>
+            <span>${icon('CheckCircle2', 13)} Real-time submission validation</span>
+          </div>
+        </div>
+      `;
+    }
+
+    // Phase 3 & 4: Admin Sends Question (QUESTION_ACTIVE or QUESTION_ENDED)
     if (eventStatus === 'QUESTION_ACTIVE' || eventStatus === 'QUESTION_ENDED') {
       if (!currentQuestion) {
         return `
           <div class="live-lobby-card">
-            <div class="admin-loading-spinner"></div>
-            <h2 style="margin-top: 1rem; font-size: 1.15rem;">Awaiting next question from Host...</h2>
+            <div class="admin-loading-spinner" style="margin: 0 auto 1.5rem;"></div>
+            <h2 class="lobby-title" style="font-size: 1.4rem;">Waiting for Next Question...</h2>
+            <p class="lobby-desc">The host is preparing the next question. Please remain on this screen.</p>
           </div>
         `;
       }
 
       const pct = Math.max(0, Math.min(100, (remainingSeconds / totalQuestionSeconds) * 100));
+      const isEnded = eventStatus === 'QUESTION_ENDED';
 
       return `
         <div class="live-question-arena">
@@ -144,168 +255,74 @@ export function renderLiveEventQuizView(
           <!-- Question Body -->
           <div class="arena-card">
             <div class="arena-q-header">
-              <span class="arena-pts-chip">${icon('Zap', 13)} ${currentQuestion.points || 100} Points</span>
-              ${hasAnsweredCurrent ? `<span class="answer-locked-pill">${icon('Lock', 12)} Answer Locked In</span>` : ''}
+              <span class="arena-pts-chip">${icon('Award', 13)} Question ${currentQuestionIdx + 1}</span>
+              ${hasAnsweredCurrent ? `<span class="answer-locked-pill">${icon('CheckCircle2', 12)} Answer Recorded</span>` : ''}
             </div>
 
             <h2 class="arena-question-text">${escapeHtml(currentQuestion.questionText)}</h2>
 
             <!-- Options Grid -->
+            <!-- Participant privacy: Never highlight correct/wrong colors or scores -->
             <div class="arena-options-grid" id="arena-options-grid">
               ${(currentQuestion.options || []).map((opt: string, i: number) => {
                 const isSelected = selectedOptionIdx === i;
-                const isRevealed = eventStatus === 'QUESTION_ENDED';
-                const isCorrect = isRevealed && i === currentQuestion.correctOption;
-                const isWrongSelection = isRevealed && isSelected && i !== currentQuestion.correctOption;
-
                 let cls = 'arena-opt-btn';
                 if (isSelected) cls += ' selected';
-                if (isCorrect) cls += ' correct';
-                if (isWrongSelection) cls += ' wrong';
 
                 return `
-                  <button class="${cls}" data-index="${i}" ${hasAnsweredCurrent || isRevealed ? 'disabled' : ''}>
+                  <button class="${cls}" data-index="${i}" ${hasAnsweredCurrent || isEnded ? 'disabled' : ''}>
                     <span class="opt-key">${String.fromCharCode(65 + i)}</span>
                     <span class="opt-label">${escapeHtml(opt)}</span>
                     <span class="opt-state-icon">
-                      ${isCorrect ? icon('CheckCircle2', 18) : isWrongSelection ? icon('XCircle', 18) : ''}
+                      ${isSelected ? icon('Check', 16) : ''}
                     </span>
                   </button>
                 `;
               }).join('')}
             </div>
 
-            <!-- Lock Answer Button -->
-            ${!hasAnsweredCurrent && eventStatus === 'QUESTION_ACTIVE' ? `
+            <!-- Submit Answer Button (Before submission) -->
+            ${!hasAnsweredCurrent && !isEnded ? `
               <div class="arena-submit-row">
                 <button id="btn-submit-live-answer" class="btn btn-primary btn-pill btn-lock-answer" ${selectedOptionIdx === null ? 'disabled' : ''}>
-                  <span>${icon('Lock', 14)} Submit & Lock Answer</span>
+                  <span>${icon('Lock', 14)} Submit Answer</span>
                 </button>
               </div>
             ` : ''}
 
-            <!-- Waiting for Host / Explanation Strip -->
-            ${eventStatus === 'QUESTION_ENDED' ? `
-              <div class="arena-reveal-box">
-                <div class="reveal-header">
-                  <span class="reveal-icon">${icon('Lightbulb', 16)}</span>
-                  <span class="reveal-title">Question Time Ended • Official Explanation</span>
-                </div>
-                <p class="reveal-desc">${escapeHtml(currentQuestion.explanation || 'Answer locked in by server.')}</p>
-                <div class="reveal-interim-note">
-                  ${icon('Clock', 14)} Waiting for Host to broadcast next question...
+            <!-- Phase 4: Participant Answers -> "Answer Submitted — Waiting for Next Question" -->
+            ${hasAnsweredCurrent ? `
+              <div class="arena-locked-notice">
+                <div class="locked-icon-badge">${icon('CheckCircle2', 24)}</div>
+                <div class="locked-text">
+                  <h3 class="locked-headline">Answer Submitted — Waiting for Next Question</h3>
+                  <p class="locked-subtext">
+                    Your response has been securely recorded on the server. Please wait for the host to send the next question.
+                  </p>
                 </div>
               </div>
-            ` : hasAnsweredCurrent ? `
-              <div class="arena-locked-notice">
-                <span class="locked-icon">${icon('CheckCircle2', 18)}</span>
-                <div class="locked-text">
-                  <strong>Answer recorded on server!</strong>
-                  <span>Waiting for timer to expire or host to advance to next question...</span>
+            ` : isEnded ? `
+              <!-- Phase 4/6: Question timer ended without answer -->
+              <div class="arena-question-ended-notice">
+                <div class="ended-icon-badge">${icon('Clock', 22)}</div>
+                <div class="ended-text">
+                  <h3 class="ended-headline">Question Time Ended — Waiting for Next Question</h3>
+                  <p class="ended-subtext">
+                    Time for this question has expired. Please stand by while the host broadcasts the next question.
+                  </p>
                 </div>
               </div>
             ` : ''}
           </div>
-
-          <!-- Interim Leaderboard Preview -->
-          ${currentLeaderboard.length > 0 ? `
-            <div class="arena-interim-leaderboard">
-              <h4 class="interim-heading">${icon('Trophy', 14)} Live Interim Standings (Top 5)</h4>
-              <div class="interim-table">
-                ${currentLeaderboard.slice(0, 5).map(entry => `
-                  <div class="interim-row ${entry.userId === user.id ? 'interim-me' : ''}">
-                    <span class="int-rank">#${entry.rank}</span>
-                    <span class="int-name">${escapeHtml(entry.userName)} ${entry.userId === user.id ? '(You)' : ''}</span>
-                    <span class="int-score">${entry.score} pts</span>
-                  </div>
-                `).join('')}
-              </div>
-            </div>
-          ` : ''}
         </div>
       `;
     }
 
-    return renderFinalLeaderboard();
-  }
-
-  function renderFinalLeaderboard(): string {
     return `
-      <div class="final-leaderboard-container">
-        <div class="leaderboard-header-banner">
-          <div class="lead-badge">${icon('Trophy', 14)} FINAL COMPETITION RESULTS</div>
-          <h1 class="lead-title">${escapeHtml(eventTitle)}</h1>
-          <p class="lead-desc">Official final rankings computed by the real-time scoring engine across speed, accuracy, and total points.</p>
-        </div>
-
-        <!-- Podium Top 3 -->
-        ${currentLeaderboard.length >= 2 ? `
-          <div class="lead-podium-wrap">
-            <!-- 2nd place -->
-            <div class="podium-card rank-2">
-              <span class="podium-medal">🥈 2nd</span>
-              <span class="podium-name">${escapeHtml(currentLeaderboard[1]?.userName || '—')}</span>
-              <span class="podium-pts">${currentLeaderboard[1]?.score || 0} pts</span>
-              <span class="podium-correct">${currentLeaderboard[1]?.correctCount || 0} Correct</span>
-            </div>
-            <!-- 1st place -->
-            <div class="podium-card rank-1">
-              <span class="podium-crown">${icon('Crown', 24)}</span>
-              <span class="podium-medal">🥇 CHAMPION</span>
-              <span class="podium-name">${escapeHtml(currentLeaderboard[0]?.userName || '—')}</span>
-              <span class="podium-pts">${currentLeaderboard[0]?.score || 0} pts</span>
-              <span class="podium-correct">${currentLeaderboard[0]?.correctCount || 0} Correct</span>
-            </div>
-            <!-- 3rd place -->
-            <div class="podium-card rank-3">
-              <span class="podium-medal">🥉 3rd</span>
-              <span class="podium-name">${escapeHtml(currentLeaderboard[2]?.userName || '—')}</span>
-              <span class="podium-pts">${currentLeaderboard[2]?.score || 0} pts</span>
-              <span class="podium-correct">${currentLeaderboard[2]?.correctCount || 0} Correct</span>
-            </div>
-          </div>
-        ` : ''}
-
-        <!-- Leaderboard Table -->
-        <div class="lead-table-card">
-          <table class="lead-table">
-            <thead>
-              <tr>
-                <th style="width: 70px;">Rank</th>
-                <th>Participant</th>
-                <th style="text-align: right;">Score</th>
-                <th style="text-align: right;">Correct</th>
-                <th style="text-align: right;">Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              ${currentLeaderboard.map(item => `
-                <tr class="${item.userId === user.id ? 'row-me' : ''}">
-                  <td class="lead-rank-col">
-                    ${item.rank === 1 ? '🥇 1' : item.rank === 2 ? '🥈 2' : item.rank === 3 ? '🥉 3' : `#${item.rank}`}
-                  </td>
-                  <td class="lead-name-col">
-                    <strong>${escapeHtml(item.userName)}</strong>
-                    ${item.userId === user.id ? '<span class="badge-you">YOU</span>' : ''}
-                  </td>
-                  <td class="lead-score-col" style="text-align: right;"><strong>${item.score}</strong></td>
-                  <td class="lead-correct-col" style="text-align: right;">${item.correctCount} / ${totalQuestions}</td>
-                  <td class="lead-time-col" style="text-align: right;">${item.totalTimeSeconds}s</td>
-                </tr>
-              `).join('')}
-              ${currentLeaderboard.length === 0 ? `
-                <tr><td colspan="5" style="text-align: center; padding: 2rem;">No scores recorded yet.</td></tr>
-              ` : ''}
-            </tbody>
-          </table>
-        </div>
-
-        <div class="lead-actions-row">
-          <button id="btn-lead-return" class="btn btn-primary btn-pill">
-            <span>Return to Events Arena</span>
-            ${icon('ArrowRight', 14)}
-          </button>
-        </div>
+      <div class="live-lobby-card">
+        <div class="admin-loading-spinner" style="margin: 0 auto 1.5rem;"></div>
+        <h2 class="lobby-title" style="font-size: 1.4rem;">Connecting to Live Event...</h2>
+        <p class="lobby-desc">Establishing real-time synchronization with server.</p>
       </div>
     `;
   }
@@ -327,7 +344,7 @@ export function renderLiveEventQuizView(
       });
     });
 
-    // Submit / Lock Answer Button
+    // Submit Answer Button (Phase 4: Participant Answers)
     container.querySelector('#btn-submit-live-answer')?.addEventListener('click', () => {
       if (selectedOptionIdx === null || hasAnsweredCurrent || !currentQuestion) return;
       soundEngine.playClick();
@@ -335,7 +352,7 @@ export function renderLiveEventQuizView(
 
       const timeSpent = Math.max(1, (Date.now() - questionStartTime) / 1000);
 
-      // Submit directly over WebSocket to Server!
+      // Submit immediately over WebSocket to Backend
       wsClient.send('SUBMIT_ANSWER', {
         eventId,
         questionId: currentQuestion.id,
@@ -343,10 +360,12 @@ export function renderLiveEventQuizView(
         timeTakenSeconds: timeSpent
       });
 
+      showToast('Answer submitted! Waiting for next question...', 'success');
       renderView();
     });
 
-    container.querySelector('#btn-lead-return')?.addEventListener('click', () => {
+    // Return to Events from Concluded Screen
+    container.querySelector('#btn-return-events')?.addEventListener('click', () => {
       soundEngine.playClick();
       leaveRoom();
     });
@@ -359,14 +378,14 @@ export function renderLiveEventQuizView(
   }
 
   // =========================================================================
-  // WEBSOCKET SUBSCRIPTIONS & EVENT LISTENERS
+  // WEBSOCKET SUBSCRIPTIONS (Synchronized Real-Time Event Flow)
   // =========================================================================
 
   wsClient.connect();
   wsClient.joinEventRoom(eventId);
 
   const unsubs = [
-    // 1. Full State Snapshot (reconnection resilience!)
+    // 1. Full State Snapshot (reconnection resilience)
     wsClient.on('EVENT_STATE_SNAPSHOT', (snap: any) => {
       if (snap.eventId !== eventId) return;
 
@@ -381,27 +400,20 @@ export function renderLiveEventQuizView(
       if (snap.previousAnswer) {
         selectedOptionIdx = snap.previousAnswer.selectedOption;
       }
-      if (snap.userScore) {
-        myScore = snap.userScore.score;
-        myCorrectCount = snap.userScore.correctCount;
-      }
-      if (snap.leaderboard) {
-        currentLeaderboard = snap.leaderboard;
-      }
 
       renderView();
     }),
 
-    // 2. Event Started
+    // 2. Admin Starts Event (Phase 2: "Event Started — Waiting for Next Question")
     wsClient.on('EVENT_STARTED', (data: any) => {
       if (data.eventId !== eventId) return;
       soundEngine.playCorrect();
-      showToast('Event has started! Get ready for Question 1...', 'info');
-      eventStatus = 'LOBBY';
+      showToast('Event started! Waiting for host to send Question 1...', 'info');
+      eventStatus = 'EVENT_STARTED_WAITING_QUESTION';
       renderView();
     }),
 
-    // 3. Question Sent by Admin
+    // 3. Admin Sends Question (Phase 3: "Send Question")
     wsClient.on('QUESTION_SENT', (data: any) => {
       if (data.eventId !== eventId) return;
       soundEngine.playCorrect();
@@ -417,7 +429,7 @@ export function renderLiveEventQuizView(
       renderView();
     }),
 
-    // 4. Question Timer Tick
+    // 4. Synchronized Countdown Timer Tick
     wsClient.on('QUESTION_TIMER_STARTED', (data: any) => {
       if (data.eventId !== eventId) return;
       remainingSeconds = data.remainingSeconds;
@@ -436,50 +448,27 @@ export function renderLiveEventQuizView(
       }
     }),
 
-    // 5. Answer Submitted Ack
+    // 5. Answer Submitted Acknowledgment from Server
     wsClient.on('ANSWER_SUBMITTED', (data: any) => {
-      myScore = data.currentScore;
-      const scoreVal = container.querySelector('#live-user-score');
-      if (scoreVal) scoreVal.textContent = myScore.toString();
+      if (data.eventId !== eventId) return;
+      // Mark answered if not already set
+      if (!hasAnsweredCurrent) {
+        hasAnsweredCurrent = true;
+        renderView();
+      }
     }),
 
-    // 6. Question Ended
+    // 6. Question Ended (Time expired or Host ended question before sending next)
     wsClient.on('QUESTION_ENDED', (data: any) => {
       if (data.eventId !== eventId) return;
       eventStatus = 'QUESTION_ENDED';
-      if (currentQuestion) {
-        currentQuestion.correctOption = data.correctOption;
-        currentQuestion.explanation = data.explanation;
-      }
-      if (data.leaderboard) {
-        currentLeaderboard = data.leaderboard;
-      }
       renderView();
     }),
 
-    // 7. Leaderboard Updated
-    wsClient.on('LEADERBOARD_UPDATED', (data: any) => {
-      if (data.eventId !== eventId) return;
-      currentLeaderboard = data.leaderboard || [];
-      const me = currentLeaderboard.find(e => e.userId === user.id);
-      if (me) {
-        myScore = me.score;
-        myCorrectCount = me.correctCount;
-        const scoreVal = container.querySelector('#live-user-score');
-        if (scoreVal) scoreVal.textContent = myScore.toString();
-        const corrVal = container.querySelector('#live-user-correct');
-        if (corrVal) corrVal.textContent = myCorrectCount.toString();
-      }
-      renderView();
-    }),
-
-    // 8. Event Ended
+    // 7. Admin Ends Event (Phase 8: "Event Completed — Thank You for Participating")
     wsClient.on('EVENT_ENDED', (data: any) => {
       if (data.eventId !== eventId) return;
       eventStatus = 'EVENT_ENDED';
-      if (data.leaderboard) {
-        currentLeaderboard = data.leaderboard;
-      }
       launchConfetti();
       soundEngine.playCorrect();
       renderView();

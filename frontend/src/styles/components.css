@@ -5279,14 +5279,197 @@
   font-style: italic;
 }
 
+.live-status-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  background: rgba(30, 41, 59, 0.7);
+  border: 1px solid rgba(148, 163, 184, 0.3);
+  padding: 0.35rem 0.85rem;
+  border-radius: var(--radius-full);
+  color: #f8fafc;
+  font-size: 0.82rem;
+  font-weight: 700;
+  backdrop-filter: blur(8px);
+}
+
+.live-status-pill .pulse-dot {
+  background: #22c55e;
+  box-shadow: 0 0 8px #22c55e;
+}
+
+.live-status-pill-text {
+  color: #f1f5f9;
+  letter-spacing: 0.02em;
+}
+
 .arena-locked-notice {
-  text-align: center;
-  padding: 1rem;
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  text-align: left;
+  padding: 1.5rem 1.75rem;
+  color: #f8fafc;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.85) 100%);
+  border: 1.5px solid rgba(74, 222, 128, 0.4);
+  border-radius: 18px;
+  margin-top: 1.5rem;
+  box-shadow: 0 10px 25px -5px rgba(22, 163, 74, 0.15);
+  animation: fadeInNotice 0.3s ease-out;
+}
+
+.locked-icon-badge {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.2);
+  border: 1.5px solid #22c55e;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #4ade80;
+}
+
+.locked-text {
+  flex: 1;
+}
+
+.locked-headline {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #4ade80;
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.01em;
+}
+
+.locked-subtext {
+  font-size: 0.85rem;
   color: #94a3b8;
-  font-size: 0.88rem;
-  background: rgba(255, 255, 255, 0.02);
-  border-radius: 12px;
-  margin-top: 1.25rem;
+  margin: 0;
+  line-height: 1.5;
+}
+
+.arena-question-ended-notice {
+  display: flex;
+  align-items: center;
+  gap: 1.25rem;
+  text-align: left;
+  padding: 1.5rem 1.75rem;
+  color: #f8fafc;
+  background: linear-gradient(135deg, rgba(15, 23, 42, 0.85) 0%, rgba(30, 41, 59, 0.85) 100%);
+  border: 1.5px solid rgba(251, 191, 36, 0.4);
+  border-radius: 18px;
+  margin-top: 1.5rem;
+  box-shadow: 0 10px 25px -5px rgba(245, 158, 11, 0.15);
+  animation: fadeInNotice 0.3s ease-out;
+}
+
+.ended-icon-badge {
+  flex-shrink: 0;
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  background: rgba(245, 158, 11, 0.2);
+  border: 1.5px solid #f59e0b;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #fbbf24;
+}
+
+.ended-text {
+  flex: 1;
+}
+
+.ended-headline {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: #fbbf24;
+  margin: 0 0 0.25rem;
+  letter-spacing: -0.01em;
+}
+
+.ended-subtext {
+  font-size: 0.85rem;
+  color: #94a3b8;
+  margin: 0;
+  line-height: 1.5;
+}
+
+@keyframes fadeInNotice {
+  from { opacity: 0; transform: translateY(6px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* Event Completed Screen (Participant View) */
+.live-completed-card {
+  max-width: 680px;
+  margin: 2rem auto;
+  background: #1e293b;
+  border: 1.5px solid #334155;
+  border-radius: 28px;
+  padding: 3.5rem 2.5rem;
+  text-align: center;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5);
+  color: #f8fafc;
+  animation: fadeInNotice 0.4s ease-out;
+}
+
+.completed-icon-ring {
+  width: 88px;
+  height: 88px;
+  margin: 0 auto 1.5rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: rgba(34, 197, 94, 0.15);
+  border: 2px solid #22c55e;
+  box-shadow: 0 0 25px rgba(34, 197, 94, 0.3);
+}
+
+.completed-icon {
+  color: #4ade80;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.completed-badge-pill {
+  display: inline-block;
+  font-size: 0.75rem;
+  font-weight: 800;
+  letter-spacing: 0.08em;
+  padding: 0.35rem 0.95rem;
+  border-radius: var(--radius-full);
+  background: rgba(34, 197, 94, 0.2);
+  color: #86efac;
+  border: 1px solid rgba(34, 197, 94, 0.4);
+  margin-bottom: 1rem;
+}
+
+.completed-title {
+  font-family: var(--font-display);
+  font-size: 1.95rem;
+  font-weight: 800;
+  color: #ffffff;
+  margin: 0 0 0.85rem;
+  letter-spacing: -0.02em;
+}
+
+.completed-desc {
+  font-size: 0.98rem;
+  color: #94a3b8;
+  line-height: 1.65;
+  max-width: 520px;
+  margin: 0 auto 2rem;
+}
+
+.completed-action-row {
+  display: flex;
+  justify-content: center;
+  gap: 1rem;
 }
 
 /* Responsive adjustment */

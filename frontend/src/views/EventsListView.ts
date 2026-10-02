@@ -162,30 +162,32 @@ export function renderEventsListView(
       if (isLive) {
         return `
           <button class="btn btn-primary btn-pill btn-enter-live-quiz" data-id="${ev.id}" style="width: 100%; justify-content: center; background: linear-gradient(135deg, #16a34a 0%, #059669 100%);">
-            <span>Enter Live Quiz Room</span>
-            ${icon('Radio', 14)}
+            <span class="pulse-dot" style="margin-right: 6px;"></span>
+            <span>Event Started — Enter Live Arena</span>
+            ${icon('ArrowRight', 14)}
           </button>
         `;
       } else if (isCompleted) {
         return `
-          <button class="btn btn-secondary btn-pill btn-view-leaderboard" data-id="${ev.id}" style="width: 100%; justify-content: center;">
-            <span>${icon('Trophy', 14)} View Final Leaderboard</span>
-          </button>
+          <div class="registered-confirmed-badge" style="background: #f8fafc; border-color: #cbd5e1; color: #475569; justify-content: center;">
+            <span class="check-icon" style="color: #64748b;">${icon('CheckCircle2', 15)}</span>
+            <span>Event Completed — Thank You for Participating</span>
+          </div>
         `;
       } else {
         return `
-          <div class="registered-confirmed-badge">
+          <div class="registered-confirmed-badge" style="justify-content: center;">
             <span class="check-icon">${icon('CheckCircle2', 15)}</span>
-            <span>Registered ✓ — Waiting for Host</span>
+            <span>Registered — Waiting for Host</span>
           </div>
         `;
       }
     } else {
       if (isCompleted) {
         return `
-          <button class="btn btn-secondary btn-pill btn-view-leaderboard" data-id="${ev.id}" style="width: 100%; justify-content: center;">
-            <span>${icon('Trophy', 14)} View Final Leaderboard</span>
-          </button>
+          <div class="registered-confirmed-badge" style="background: #f8fafc; border-color: #cbd5e1; color: #64748b; justify-content: center;">
+            <span>${icon('Lock', 14)} Event Concluded</span>
+          </div>
         `;
       }
       return `
@@ -309,6 +311,13 @@ export function renderEventsListView(
         ev.status = 'LIVE_NOW';
         renderEventsGrid();
         showToast(`Event "${ev.title}" is now LIVE!`, 'success');
+      }
+    }),
+    wsClient.on('EVENT_ENDED', ({ eventId }: any) => {
+      const ev = events.find(e => e.id === eventId);
+      if (ev) {
+        ev.status = 'COMPLETED';
+        renderEventsGrid();
       }
     })
   ];

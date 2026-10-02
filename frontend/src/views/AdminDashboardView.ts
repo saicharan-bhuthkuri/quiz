@@ -3501,7 +3501,7 @@ export function renderAdminDashboardView(
     const totalQs = hostQuestions.length;
     const nextQIdx = hostCurrentQuestionIdx + 1;
     const isQuestionActive = hostEventStatus === 'QUESTION_ACTIVE';
-    const isLobby = hostEventStatus === 'LOBBY' || hostEventStatus === 'QUESTION_ENDED';
+    const isLobby = hostEventStatus === 'LOBBY' || hostEventStatus === 'EVENT_STARTED_WAITING_QUESTION' || hostEventStatus === 'QUESTION_ENDED';
     const isUpcoming = hostEventStatus === 'UPCOMING';
     const isEnded = hostEventStatus === 'EVENT_ENDED' || hostEventStatus === 'COMPLETED';
 
@@ -3783,6 +3783,40 @@ export function renderAdminDashboardView(
       wsClient.on('ANSWER_SUBMITTED', (data: any) => {
         if (data.eventId === eventId) {
           hostQuestionAnswerCount += 1;
+        }
+      }),
+
+      wsClient.on('ADMIN_SCORE_UPDATED', (data: any) => {
+        if (data.eventId === eventId) {
+          if (data.answersSubmittedCount !== undefined) {
+            hostQuestionAnswerCount = data.answersSubmittedCount;
+          } else {
+            hostQuestionAnswerCount += 1;
+          }
+          if (data.leaderboard) {
+            hostLeaderboard = data.leaderboard;
+            const tbody = container.querySelector('#host-scoreboard-tbody');
+            const count = container.querySelector('#host-lead-count');
+            if (tbody) tbody.innerHTML = renderHostScoreboardRows();
+            if (count) count.textContent = `${hostLeaderboard.length} Participants Ranked`;
+          }
+          renderHostConsoleBody();
+        }
+      }),
+
+      wsClient.on('ADMIN_QUESTION_REVIEW', (data: any) => {
+        if (data.eventId === eventId && data.leaderboard) {
+          hostLeaderboard = data.leaderboard;
+          const tbody = container.querySelector('#host-scoreboard-tbody');
+          if (tbody) tbody.innerHTML = renderHostScoreboardRows();
+        }
+      }),
+
+      wsClient.on('ADMIN_EVENT_CONCLUDED', (data: any) => {
+        if (data.eventId === eventId && data.leaderboard) {
+          hostLeaderboard = data.leaderboard;
+          const tbody = container.querySelector('#host-scoreboard-tbody');
+          if (tbody) tbody.innerHTML = renderHostScoreboardRows();
         }
       }),
 
@@ -4881,6 +4915,23 @@ export function renderAdminDashboardView(
           }
         }),
 
+        wsClient.on('ADMIN_SCORE_UPDATED', (data: any) => {
+          if (data.eventId === eventId) {
+            examAnswerCount = data.answersSubmittedCount ?? (examAnswerCount + 1);
+            const cntElem = container.querySelector('#exam-answers-submitted-badge');
+            if (cntElem) cntElem.textContent = `${examAnswerCount} answers submitted`;
+            const name = data.participantName || 'Participant';
+            const pts = data.pointsAwarded ? `(+${data.pointsAwarded} pts)` : '';
+            addExamLog(`Participant ${name} submitted answer ${pts}`, data.isCorrect ? 'success' : 'warn');
+          }
+        }),
+
+        wsClient.on('ADMIN_QUESTION_REVIEW', (data: any) => {
+          if (data.eventId === eventId) {
+            addExamLog(`Question review: Timer concluded. Ready to broadcast next question.`, 'info');
+          }
+        }),
+
         wsClient.on('QUESTION_ENDED', (data: any) => {
           if (data.eventId !== eventId) return;
           examStatus = 'QUESTION_ENDED';
@@ -4905,7 +4956,7 @@ export function renderAdminDashboardView(
       const ev = allEvents.find(e => e.id === examSelectedEventId);
       if (!ev) return;
 
-      const isLive = examStatus === 'LOBBY' || examStatus === 'QUESTION_ACTIVE' || examStatus === 'QUESTION_ENDED';
+      const isLive = examStatus === 'LOBBY' || examStatus === 'EVENT_STARTED_WAITING_QUESTION' || examStatus === 'QUESTION_ACTIVE' || examStatus === 'QUESTION_ENDED';
       const isExamActive = examStatus === 'QUESTION_ACTIVE';
       const isEnded = examStatus === 'EVENT_ENDED' || ev.status === 'COMPLETED';
 
@@ -4949,11 +5000,11 @@ export function renderAdminDashboardView(
             <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
               ${(!isLive && !isEnded) ? `
                 <button id="btn-exam-start-event" class="btn btn-pill" style="background: linear-gradient(135deg, #16a34a, #22c55e); color: #ffffff; font-weight: 700;">
-                  <span>${icon('Play', 14)} Start Exam (Open Lobby)</span>
+                  <span>${icon('Play', 14)} Start Event</span>
                 </button>
               ` : ''}
 
-              ${(examStatus === 'LOBBY') ? `
+              ${(examStatus === 'LOBBY' || examStatus === 'EVENT_STARTED_WAITING_QUESTION') ? `
                 <button id="btn-exam-send-first" class="btn btn-primary btn-pill" style="font-weight: 700;">
                   <span>${icon('Send', 14)} Send Question 1</span>
                 </button>
@@ -5207,6 +5258,24 @@ export function renderAdminDashboardView(
           if (data.eventId !== eventId) return;
           sbLeaderboard = data.leaderboard || [];
           renderScoreboard();
+        }),
+        wsClient.on('ADMIN_SCORE_UPDATED', (data: any) => {
+          if (data.eventId === eventId && data.leaderboard) {
+            sbLeaderboard = data.leaderboard;
+            renderScoreboard();
+          }
+        }),
+        wsClient.on('ADMIN_QUESTION_REVIEW', (data: any) => {
+          if (data.eventId === eventId && data.leaderboard) {
+            sbLeaderboard = data.leaderboard;
+            renderScoreboard();
+          }
+        }),
+        wsClient.on('ADMIN_EVENT_CONCLUDED', (data: any) => {
+          if (data.eventId === eventId && data.leaderboard) {
+            sbLeaderboard = data.leaderboard;
+            renderScoreboard();
+          }
         }),
         wsClient.on('SCORE_UPDATED', () => {
           renderScoreboard();

@@ -19,7 +19,7 @@ export interface LiveEventState {
   title: string;
   description: string;
   domain: string;
-  status: 'UPCOMING' | 'LOBBY' | 'QUESTION_ACTIVE' | 'QUESTION_ENDED' | 'EVENT_ENDED';
+  status: 'UPCOMING' | 'LOBBY' | 'EVENT_STARTED_WAITING_QUESTION' | 'QUESTION_ACTIVE' | 'QUESTION_ENDED' | 'EVENT_ENDED';
   currentQuestionIndex: number;
   questionStartTime: number | null;
   questionRemainingSeconds: number;
@@ -371,31 +371,41 @@ class RealtimeQuizEngine {
           userScore.totalTimeSeconds += timeTaken;
         }
 
-        // Send confirmation back to participant
+        // Send status-only confirmation back to participant (NO score, NO isCorrect, NO points)
         this.sendToClient(client, {
           type: 'ANSWER_SUBMITTED',
           payload: {
             questionId,
             selectedOption,
-            isCorrect,
-            pointsEarned,
-            currentScore: userScore?.score || 0
+            status: 'RECORDED'
           }
         });
 
-        // Broadcast live score update & leaderboard to room
-        this.broadcastToRoom(eventId, {
-          type: 'SCORE_UPDATED',
+        // Broadcast live score update & live leaderboard EXCLUSIVELY to Admin Dashboard
+        this.broadcastToAdmins(eventId, {
+          type: 'ADMIN_SCORE_UPDATED',
           payload: {
+            eventId,
             userId: client.userId,
             userName: client.userName || 'Participant',
+            questionId,
+            selectedOption,
+            isCorrect,
+            pointsEarned,
             score: userScore?.score || 0,
             correctCount: userScore?.correctCount || 0,
+            leaderboard: this.getLeaderboard(state)
+          }
+        });
+
+        // Broadcast anonymized answer submission counter to room for Admin counter update
+        this.broadcastToRoom(eventId, {
+          type: 'ANSWER_SUBMITTED',
+          payload: {
+            eventId,
             questionId
           }
         });
-
-        this.broadcastLeaderboard(state);
         break;
       }
 
@@ -410,7 +420,7 @@ class RealtimeQuizEngine {
         const state = await this.getOrLoadEventState(eventId);
         if (!state) return;
 
-        state.status = 'LOBBY';
+        state.status = 'EVENT_STARTED_WAITING_QUESTION';
         state.currentQuestionIndex = -1;
 
         await db.execute({
@@ -418,17 +428,17 @@ class RealtimeQuizEngine {
           args: [eventId]
         });
 
-        // Broadcast to all clients in app that event has gone LIVE
+        // Broadcast to all clients in app that event has started (waiting for next question)
         this.broadcastAll({
           type: 'EVENT_STARTED',
           payload: {
             eventId,
-            status: 'LOBBY',
+            status: 'EVENT_STARTED_WAITING_QUESTION',
             title: state.title
           }
         });
 
-        // Broadcast state snapshot to the event room
+        // Broadcast state snapshot to the event room (participants see Event Started — Waiting for Next Question)
         this.broadcastEventSnapshot(state);
         break;
       }
@@ -549,11 +559,29 @@ class RealtimeQuizEngine {
 
         const finalLeaderboard = this.getLeaderboard(state);
 
-        this.broadcastAll({
+        // Notify participants: Event Completed (NO score or rankings shown to participants)
+        this.broadcastToRoom(eventId, {
           type: 'EVENT_ENDED',
           payload: {
             eventId,
+            status: 'EVENT_ENDED'
+          }
+        });
+
+        // Send full official results exclusively to Admin
+        this.broadcastToAdmins(eventId, {
+          type: 'ADMIN_EVENT_CONCLUDED',
+          payload: {
+            eventId,
             leaderboard: finalLeaderboard
+          }
+        });
+
+        this.broadcastAll({
+          type: 'EVENT_COMPLETED',
+          payload: {
+            eventId,
+            status: 'COMPLETED'
           }
         });
 
@@ -633,18 +661,27 @@ class RealtimeQuizEngine {
     state.status = 'QUESTION_ENDED';
     const currentQ = state.questions[state.currentQuestionIndex];
 
+    // Broadcast to participants: only notify that question ended (NO correct answer or leaderboard shown to participants)
     this.broadcastToRoom(state.id, {
       type: 'QUESTION_ENDED',
       payload: {
         eventId: state.id,
         questionIndex: state.currentQuestionIndex,
-        correctOption: currentQ.correctOption,
-        explanation: currentQ.explanation,
-        leaderboard: this.getLeaderboard(state).slice(0, 5) // interim top 5
+        status: 'QUESTION_ENDED'
       }
     });
 
-    this.broadcastLeaderboard(state);
+    // Send full question review & live leaderboard exclusively to Admin
+    this.broadcastToAdmins(state.id, {
+      type: 'ADMIN_QUESTION_REVIEW',
+      payload: {
+        eventId: state.id,
+        questionIndex: state.currentQuestionIndex,
+        correctOption: currentQ.correctOption,
+        explanation: currentQ.explanation,
+        leaderboard: this.getLeaderboard(state)
+      }
+    });
   }
 
   // Calculate and return current leaderboard
@@ -670,10 +707,10 @@ class RealtimeQuizEngine {
     }));
   }
 
-  // Broadcast leaderboard update to event room
+  // Broadcast leaderboard update to event room (Admin clients only)
   public broadcastLeaderboard(state: LiveEventState) {
     const leaderboard = this.getLeaderboard(state);
-    this.broadcastToRoom(state.id, {
+    this.broadcastToAdmins(state.id, {
       type: 'LEADERBOARD_UPDATED',
       payload: {
         eventId: state.id,
@@ -691,11 +728,11 @@ class RealtimeQuizEngine {
     const userScore = client.userId ? state.scores.get(client.userId) : null;
     const answeredCurrent = currentQ && client.userId ? userScore?.answers.has(currentQ.id) : false;
     const previousAnswer = currentQ && client.userId ? userScore?.answers.get(currentQ.id) : null;
+    const isAdmin = client.role === 'ADMIN' || client.role === 'SUPERADMIN';
 
-    // Send question without revealing correct answer unless status is QUESTION_ENDED or user is ADMIN
+    // Safe question payload: never leak correct answer or explanation to participants
     let safeQuestion = null;
     if (currentQ) {
-      const showAnswer = state.status === 'QUESTION_ENDED' || client.role === 'ADMIN' || client.role === 'SUPERADMIN';
       safeQuestion = {
         id: currentQ.id,
         questionText: currentQ.questionText,
@@ -703,7 +740,7 @@ class RealtimeQuizEngine {
         points: currentQ.points,
         timerSeconds: currentQ.timerSeconds,
         questionOrder: currentQ.questionOrder,
-        ...(showAnswer ? { correctOption: currentQ.correctOption, explanation: currentQ.explanation } : {})
+        ...(isAdmin ? { correctOption: currentQ.correctOption, explanation: currentQ.explanation } : {})
       };
     }
 
@@ -720,13 +757,16 @@ class RealtimeQuizEngine {
         questionRemainingSeconds: state.questionRemainingSeconds,
         question: safeQuestion,
         answeredCurrent,
-        previousAnswer,
-        userScore: userScore ? {
-          score: userScore.score,
-          correctCount: userScore.correctCount,
-          totalTimeSeconds: userScore.totalTimeSeconds
-        } : null,
-        leaderboard: this.getLeaderboard(state),
+        selectedOption: previousAnswer ? previousAnswer.selectedOption : null,
+        // Only admins receive user scores and full leaderboards
+        ...(isAdmin ? {
+          leaderboard: this.getLeaderboard(state),
+          userScore: userScore ? {
+            score: userScore.score,
+            correctCount: userScore.correctCount,
+            totalTimeSeconds: userScore.totalTimeSeconds
+          } : null
+        } : {}),
         totalRegistered: state.registeredUsers.size
       }
     });
@@ -762,6 +802,18 @@ class RealtimeQuizEngine {
     for (const [ws, client] of this.clients.entries()) {
       if (ws.readyState === WebSocket.OPEN && client.currentEventId === eventId) {
         ws.send(raw);
+      }
+    }
+  }
+
+  // Helper: broadcast exclusively to admins in event room
+  public broadcastToAdmins(eventId: string, data: any) {
+    const raw = JSON.stringify(data);
+    for (const [ws, client] of this.clients.entries()) {
+      if (ws.readyState === WebSocket.OPEN && client.currentEventId === eventId) {
+        if (client.role === 'ADMIN' || client.role === 'SUPERADMIN') {
+          ws.send(raw);
+        }
       }
     }
   }

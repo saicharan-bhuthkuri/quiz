@@ -23,6 +23,20 @@ class RealtimeWebSocketClient {
 
   private initCurrentUser() {
     try {
+      const adminToken = sessionStorage.getItem('engiverse_admin_token');
+      const adminEmail = sessionStorage.getItem('engiverse_admin_email');
+      const adminName = sessionStorage.getItem('engiverse_admin_name');
+
+      if (adminToken) {
+        this.currentUser = {
+          id: 'admin_' + (adminEmail || 'root'),
+          name: adminName || 'Platform Administrator',
+          email: adminEmail || 'admin@engiverse.io',
+          role: 'ADMIN'
+        };
+        return;
+      }
+
       const raw = localStorage.getItem('engiverse_user');
       if (raw) {
         const u = JSON.parse(raw);

@@ -83,17 +83,6 @@ export function renderAdminDashboardView(
 
           <span class="sidebar-group-label" style="margin-top: 1.25rem;">EVENT MANAGEMENT</span>
 
-          <button class="sidebar-nav-btn" id="tab-btn-events" data-tab="events">
-            <span class="nav-btn-icon">${icon('List', 18)}</span>
-            <span class="nav-btn-text">List of Events</span>
-            <span class="nav-count-badge" id="badge-events-count">0</span>
-          </button>
-
-          <button class="sidebar-nav-btn" id="tab-btn-add-event" data-tab="add-event">
-            <span class="nav-btn-icon">${icon('Sliders', 18)}</span>
-            <span class="nav-btn-text">Add / Remove Event</span>
-          </button>
-
           <button class="sidebar-nav-btn" id="tab-btn-event-register" data-tab="event-register">
             <span class="nav-btn-icon">${icon('UserPlus', 18)}</span>
             <span class="nav-btn-text">Register Event</span>

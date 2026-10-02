@@ -2863,34 +2863,21 @@
   white-space: nowrap;
 }
 
-/* Responsive Table Wrapper with Subtle Custom Scrollbar */
+/* Responsive Table Wrapper without visible scrollbars */
 .table-responsive {
   width: 100%;
   max-width: 100%;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
   display: block;
-  scrollbar-width: thin;
-  scrollbar-color: #cbd5e1 #f8fafc;
+  scrollbar-width: none !important;
+  -ms-overflow-style: none !important;
 }
 
 .table-responsive::-webkit-scrollbar {
-  height: 6px;
-}
-
-.table-responsive::-webkit-scrollbar-track {
-  background: #f8fafc;
-  border-radius: 4px;
-}
-
-.table-responsive::-webkit-scrollbar-thumb {
-  background: #cbd5e1;
-  border-radius: 4px;
-  transition: background 0.2s;
-}
-
-.table-responsive::-webkit-scrollbar-thumb:hover {
-  background: #94a3b8;
+  display: none !important;
+  width: 0 !important;
+  height: 0 !important;
 }
 
 /* User & Admin Table Styling */

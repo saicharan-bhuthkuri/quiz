@@ -236,7 +236,7 @@ export async function apiAddEventQuestion(eventId: string, data: {
   points?: number;
   timerSeconds?: number;
   questionOrder?: number;
-}): Promise<{ success: boolean; question: EventQuestion }> {
+}): Promise<{ success: boolean; question?: EventQuestion; message?: string }> {
   const res = await fetch(`${API_BASE}/events/${eventId}/questions`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },

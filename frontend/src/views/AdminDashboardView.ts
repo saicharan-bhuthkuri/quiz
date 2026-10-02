@@ -1227,92 +1227,109 @@ export function renderAdminDashboardView(
 
       <!-- ================= MODAL: QUESTIONS MANAGER ================= -->
       <div id="admin-questions-modal" class="admin-modal-overlay" style="display: none;">
-        <div class="admin-modal-card" style="max-width: 780px;">
-          <div class="admin-modal-header">
+        <div class="admin-modal-card" style="max-width: 740px;">
+          <div class="admin-modal-header" style="align-items: center;">
             <div class="modal-header-title">
-              <span class="modal-badge-chip">${icon('HelpCircle', 14)} QUESTIONS MANAGER</span>
-              <h2 id="modal-questions-event-title">Event Questions</h2>
+              <span class="modal-badge-chip" id="modal-questions-badge-chip">${icon('PlusCircle', 14)} ADD NEW QUESTION</span>
+              <h2 id="modal-questions-event-title" style="margin-top: 0.25rem;">Event Questions</h2>
             </div>
-            <button id="btn-close-questions-modal" class="btn-close-modal" aria-label="Close modal">${icon('X', 18)}</button>
+            <div style="display: flex; align-items: center; gap: 0.65rem;">
+              <button id="btn-modal-toggle-view" class="btn btn-secondary btn-pill-sm" type="button" style="font-size: 0.78rem; padding: 0.35rem 0.75rem;">
+                ${icon('List', 13)} <span id="label-modal-toggle-view">View Questions List</span>
+              </button>
+              <button id="btn-close-questions-modal" class="btn-close-modal" aria-label="Close modal">${icon('X', 18)}</button>
+            </div>
           </div>
-          <div class="admin-modal-body" style="max-height: 70vh; overflow-y: auto;">
-            <!-- Questions List Table -->
-            <div class="admin-table-container" style="margin-bottom: 1.5rem; max-height: 240px; overflow-y: auto;">
-              <table class="admin-data-table">
-                <thead>
-                  <tr>
-                    <th style="width: 8%;">#</th>
-                    <th style="width: 50%;">Question</th>
-                    <th style="width: 15%;">Correct</th>
-                    <th style="width: 12%;">Timer</th>
-                    <th style="width: 15%; text-align: right;">Action</th>
-                  </tr>
-                </thead>
-                <tbody id="modal-questions-tbody">
-                  <!-- Populated dynamically -->
-                </tbody>
-              </table>
-            </div>
-
-            <!-- Add Question Form -->
-            <div style="background: #f8fafc; border: 1.5px solid var(--border-card); border-radius: var(--radius-lg); padding: 1.25rem;">
-              <h3 style="font-size: 0.95rem; font-weight: 700; margin: 0 0 1rem; color: var(--text-main); display: flex; align-items: center; gap: 0.4rem;">
-                ${icon('PlusCircle', 16)} Add New Question
-              </h3>
+          <div class="admin-modal-body" style="max-height: 75vh; overflow-y: auto; padding: 1.5rem;">
+            <!-- VIEW 1: ADD NEW QUESTION ONLY (NO PREVIOUS QUESTIONS) -->
+            <div id="modal-subview-add-question">
               <form id="form-add-question">
-                <div class="form-group" style="margin-bottom: 0.75rem;">
-                  <label class="form-label" for="new-q-text">Question Text</label>
-                  <input type="text" id="new-q-text" class="auth-input" placeholder="Enter problem statement..." required />
+                <div class="form-group" style="margin-bottom: 1.15rem;">
+                  <label class="form-label" for="new-q-text" style="font-weight: 700;">Question Text</label>
+                  <textarea id="new-q-text" class="auth-input" rows="3" placeholder="Enter problem statement..." required style="resize: vertical; min-height: 75px; font-family: inherit; font-size: 0.92rem;"></textarea>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.65rem; margin-bottom: 0.75rem;">
-                  <div>
-                    <label class="form-label">Option A</label>
-                    <input type="text" id="new-q-opt-0" class="auth-input" placeholder="Option A" required />
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1.15rem;">
+                  <div class="form-group">
+                    <label class="form-label" for="new-q-opt-0" style="font-weight: 700; color: #4f46e5;">Option A</label>
+                    <input type="text" id="new-q-opt-0" class="auth-input" placeholder="Option A choice" required />
                   </div>
-                  <div>
-                    <label class="form-label">Option B</label>
-                    <input type="text" id="new-q-opt-1" class="auth-input" placeholder="Option B" required />
+                  <div class="form-group">
+                    <label class="form-label" for="new-q-opt-1" style="font-weight: 700; color: #4f46e5;">Option B</label>
+                    <input type="text" id="new-q-opt-1" class="auth-input" placeholder="Option B choice" required />
                   </div>
-                  <div>
-                    <label class="form-label">Option C</label>
-                    <input type="text" id="new-q-opt-2" class="auth-input" placeholder="Option C" required />
+                  <div class="form-group">
+                    <label class="form-label" for="new-q-opt-2" style="font-weight: 700; color: #4f46e5;">Option C</label>
+                    <input type="text" id="new-q-opt-2" class="auth-input" placeholder="Option C choice" required />
                   </div>
-                  <div>
-                    <label class="form-label">Option D</label>
-                    <input type="text" id="new-q-opt-3" class="auth-input" placeholder="Option D" required />
+                  <div class="form-group">
+                    <label class="form-label" for="new-q-opt-3" style="font-weight: 700; color: #4f46e5;">Option D</label>
+                    <input type="text" id="new-q-opt-3" class="auth-input" placeholder="Option D choice" required />
                   </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.65rem; margin-bottom: 0.75rem;">
-                  <div>
-                    <label class="form-label">Correct Option</label>
-                    <select id="new-q-correct" class="auth-input">
+                <div style="display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 0.85rem; margin-bottom: 1.15rem;">
+                  <div class="form-group">
+                    <label class="form-label" for="new-q-correct" style="font-weight: 700; color: #16a34a;">Correct Option</label>
+                    <select id="new-q-correct" class="auth-input" style="font-weight: 600;">
                       <option value="0">Option A</option>
                       <option value="1">Option B</option>
                       <option value="2">Option C</option>
                       <option value="3">Option D</option>
                     </select>
                   </div>
-                  <div>
-                    <label class="form-label">Timer (seconds)</label>
-                    <input type="number" id="new-q-timer" class="auth-input" value="30" min="5" max="180" />
+                  <div class="form-group">
+                    <label class="form-label" for="new-q-timer" style="font-weight: 700;">Timer (Seconds)</label>
+                    <input type="number" id="new-q-timer" class="auth-input" value="30" min="5" max="180" required />
                   </div>
-                  <div>
-                    <label class="form-label">Points</label>
+                  <div class="form-group">
+                    <label class="form-label" for="new-q-points" style="font-weight: 700;">Points</label>
                     <input type="number" id="new-q-points" class="auth-input" value="100" min="10" max="1000" />
                   </div>
                 </div>
 
-                <div class="form-group" style="margin-bottom: 1rem;">
-                  <label class="form-label">Engineering Explanation</label>
+                <div class="form-group" style="margin-bottom: 1.5rem;">
+                  <label class="form-label" for="new-q-explanation">Engineering Explanation (Optional)</label>
                   <input type="text" id="new-q-explanation" class="auth-input" placeholder="Explanation revealed after question timer ends..." />
                 </div>
 
-                <button type="submit" id="btn-submit-add-question" class="btn btn-primary btn-pill" style="width: 100%; justify-content: center;">
-                  <span>${icon('Plus', 14)} Add Question to Event</span>
-                </button>
+                <div style="display: flex; align-items: center; justify-content: flex-end; gap: 0.75rem; padding-top: 1rem; border-top: 1px solid var(--border-card);">
+                  <button type="reset" class="btn btn-secondary btn-pill">
+                    <span>Clear Form</span>
+                  </button>
+                  <button type="submit" id="btn-submit-add-question" class="btn btn-primary btn-pill" style="background: linear-gradient(135deg, #7c3aed 0%, #6d28d9 100%); box-shadow: 0 4px 14px rgba(109, 40, 217, 0.35); min-width: 160px; justify-content: center;">
+                    <span>${icon('PlusCircle', 15)} Add Question</span>
+                  </button>
+                </div>
               </form>
+            </div>
+
+            <!-- VIEW 2: QUESTIONS LIST / MANAGE QUESTIONS (SEPARATE VIEW) -->
+            <div id="modal-subview-list-questions" style="display: none;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <span style="font-size: 0.88rem; font-weight: 700; color: var(--text-main);" id="modal-questions-count-summary">
+                  Existing Questions
+                </span>
+                <button id="btn-modal-switch-to-add" class="btn btn-primary btn-pill-sm" type="button" style="font-size: 0.78rem;">
+                  ${icon('PlusCircle', 13)} <span>Add Another Question</span>
+                </button>
+              </div>
+              <div class="admin-table-container" style="max-height: 380px; overflow-y: auto;">
+                <table class="admin-data-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 8%;">#</th>
+                      <th style="width: 50%;">Question</th>
+                      <th style="width: 15%;">Correct</th>
+                      <th style="width: 12%;">Timer</th>
+                      <th style="width: 15%; text-align: right;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="modal-questions-tbody">
+                    <!-- Populated dynamically -->
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </div>
@@ -3188,28 +3205,80 @@ export function renderAdminDashboardView(
   }
 
   // Open Questions Modal
-  async function openQuestionsModal(eventId: string) {
+  let modalQuestionsCurrentMode: 'add' | 'list' = 'add';
+
+  function setQuestionsModalMode(mode: 'add' | 'list') {
+    modalQuestionsCurrentMode = mode;
+    const subviewAdd = container.querySelector<HTMLElement>('#modal-subview-add-question');
+    const subviewList = container.querySelector<HTMLElement>('#modal-subview-list-questions');
+    const badgeChip = container.querySelector<HTMLElement>('#modal-questions-badge-chip');
+    const toggleBtnLabel = container.querySelector<HTMLElement>('#label-modal-toggle-view');
+
+    if (mode === 'add') {
+      if (subviewAdd) subviewAdd.style.display = 'block';
+      if (subviewList) subviewList.style.display = 'none';
+      if (badgeChip) badgeChip.innerHTML = `${icon('PlusCircle', 14)} ADD NEW QUESTION`;
+      if (toggleBtnLabel) toggleBtnLabel.textContent = 'View Questions List';
+      setTimeout(() => {
+        container.querySelector<HTMLInputElement | HTMLTextAreaElement>('#new-q-text')?.focus();
+      }, 30);
+    } else {
+      if (subviewAdd) subviewAdd.style.display = 'none';
+      if (subviewList) subviewList.style.display = 'block';
+      if (badgeChip) badgeChip.innerHTML = `${icon('List', 14)} QUESTIONS LIST`;
+      if (toggleBtnLabel) toggleBtnLabel.textContent = 'Add New Question';
+      if (currentQuestionsModalEventId) {
+        reloadModalQuestions(currentQuestionsModalEventId);
+      }
+    }
+  }
+
+  // Toggle button between Add Question and View List
+  container.querySelector<HTMLButtonElement>('#btn-modal-toggle-view')?.addEventListener('click', () => {
+    soundEngine.playClick();
+    setQuestionsModalMode(modalQuestionsCurrentMode === 'add' ? 'list' : 'add');
+  });
+
+  // Switch back to Add view from within List view
+  container.querySelector<HTMLButtonElement>('#btn-modal-switch-to-add')?.addEventListener('click', () => {
+    soundEngine.playClick();
+    setQuestionsModalMode('add');
+  });
+
+  async function openQuestionsModal(eventId: string, initialMode: 'add' | 'list' = 'add') {
     currentQuestionsModalEventId = eventId;
     const ev = allEvents.find(e => e.id === eventId);
     if (modalQuestionsEventTitle) {
       modalQuestionsEventTitle.textContent = ev ? `Questions: ${ev.title}` : 'Event Questions';
     }
-    if (modalQuestionsTbody) {
-      modalQuestionsTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem;"><div class="admin-loading-spinner"></div></td></tr>`;
-    }
-    if (questionsModal) questionsModal.style.display = 'flex';
 
-    await reloadModalQuestions(eventId);
+    setQuestionsModalMode(initialMode);
+
+    // Reset form to completely empty state
+    formAddQuestion?.reset();
+    const timerInput = container.querySelector<HTMLInputElement>('#new-q-timer');
+    if (timerInput) timerInput.value = String(ev?.timerSeconds || 30);
+    const pointsInput = container.querySelector<HTMLInputElement>('#new-q-points');
+    if (pointsInput) pointsInput.value = '100';
+
+    if (questionsModal) questionsModal.style.display = 'flex';
+    setTimeout(() => {
+      container.querySelector<HTMLInputElement | HTMLTextAreaElement>('#new-q-text')?.focus();
+    }, 50);
   }
 
   async function reloadModalQuestions(eventId: string) {
     if (!modalQuestionsTbody) return;
+    modalQuestionsTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem;"><div class="admin-loading-spinner"></div></td></tr>`;
     try {
       const res = await apiGetEventQuestions(eventId, 'admin');
       if (res.success) {
         const questions = res.questions;
+        const countSummary = container.querySelector<HTMLElement>('#modal-questions-count-summary');
+        if (countSummary) countSummary.textContent = `Existing Questions (${questions.length} Total)`;
+
         if (questions.length === 0) {
-          modalQuestionsTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:var(--text-muted);">No questions added yet. Add your first question below.</td></tr>`;
+          modalQuestionsTbody.innerHTML = `<tr><td colspan="5" style="text-align:center; padding:2rem; color:var(--text-muted);">No questions added yet. Click "Add Another Question" above to create one.</td></tr>`;
           return;
         }
 
@@ -3229,7 +3298,7 @@ export function renderAdminDashboardView(
             </td>
             <td><span style="font-size: 0.82rem; color: var(--text-muted);">${q.timerSeconds || 30}s</span></td>
             <td style="text-align: right;">
-              <button class="btn btn-pill btn-delete-q" data-id="${q.id}" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+              <button class="btn btn-pill btn-delete-q" data-id="${q.id}" style="background: #fee2e2; color: #dc2626; border: 1px solid #fca5a5; font-size: 0.75rem; padding: 0.25rem 0.5rem;" title="Delete question">
                 ${icon('Trash2', 12)}
               </button>
             </td>
@@ -3246,7 +3315,10 @@ export function renderAdminDashboardView(
               if (delRes.success) {
                 showToast('Question deleted.', 'info');
                 await reloadModalQuestions(currentQuestionsModalEventId);
-                loadEventsData();
+                await loadEventsData();
+                if (activeTab === 'event-questions') {
+                  initQuestionManagementModule(currentQuestionsModalEventId);
+                }
               }
             } catch (err) {
               console.error(err);
@@ -3260,13 +3332,13 @@ export function renderAdminDashboardView(
     }
   }
 
-  // Add Question form submission
+  // Add Question form submission: Saves to DB, resets form, and keeps empty form without loading previous questions
   formAddQuestion?.addEventListener('submit', async (e) => {
     e.preventDefault();
     if (!currentQuestionsModalEventId) return;
     soundEngine.playClick();
 
-    const qText = container.querySelector<HTMLInputElement>('#new-q-text')?.value.trim() || '';
+    const qText = container.querySelector<HTMLInputElement | HTMLTextAreaElement>('#new-q-text')?.value.trim() || '';
     const opt0 = container.querySelector<HTMLInputElement>('#new-q-opt-0')?.value.trim() || '';
     const opt1 = container.querySelector<HTMLInputElement>('#new-q-opt-1')?.value.trim() || '';
     const opt2 = container.querySelector<HTMLInputElement>('#new-q-opt-2')?.value.trim() || '';
@@ -3275,10 +3347,16 @@ export function renderAdminDashboardView(
     const timer = Number(container.querySelector<HTMLInputElement>('#new-q-timer')?.value || 30);
     const points = Number(container.querySelector<HTMLInputElement>('#new-q-points')?.value || 100);
     const expl = container.querySelector<HTMLInputElement>('#new-q-explanation')?.value.trim() || '';
+    const submitBtn = container.querySelector<HTMLButtonElement>('#btn-submit-add-question');
 
     if (!qText || !opt0 || !opt1) {
       showToast('Question text and at least options A and B are required.', 'warn');
       return;
+    }
+
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Saving Question...';
     }
 
     try {
@@ -3293,14 +3371,36 @@ export function renderAdminDashboardView(
 
       if (res.success) {
         soundEngine.playCorrect();
-        showToast('Question added and synchronized!', 'success');
+        showToast('Question saved! Ready for next question.', 'success');
+
+        // Reset form for entering another question
         formAddQuestion.reset();
-        await reloadModalQuestions(currentQuestionsModalEventId);
+        const ev = allEvents.find(eventItem => eventItem.id === currentQuestionsModalEventId);
+        const timerInput = container.querySelector<HTMLInputElement>('#new-q-timer');
+        if (timerInput) timerInput.value = String(ev?.timerSeconds || 30);
+        const pointsInput = container.querySelector<HTMLInputElement>('#new-q-points');
+        if (pointsInput) pointsInput.value = '100';
+
+        // Keep empty form focused without showing previously added questions
+        const qTextInput = container.querySelector<HTMLInputElement | HTMLTextAreaElement>('#new-q-text');
+        if (qTextInput) qTextInput.focus();
+
+        // Update events data in background
         loadEventsData();
+        if (activeTab === 'event-questions') {
+          initQuestionManagementModule(currentQuestionsModalEventId);
+        }
+      } else {
+        showToast(res.message || 'Failed to add question.', 'warn');
       }
     } catch (err) {
       console.error(err);
       showToast('Error adding question.', 'warn');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>${icon('PlusCircle', 15)} Add Question</span>`;
+      }
     }
   });
 

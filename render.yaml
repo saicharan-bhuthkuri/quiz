@@ -1,0 +1,26 @@
+services:
+  - type: web
+    name: engiverse-backend
+    runtime: node
+    plan: free
+    region: oregon
+    rootDir: backend
+    buildCommand: npm install && npm run build
+    startCommand: npm run start
+    healthCheckPath: /api/health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+      - key: PORT
+        value: 10000
+      - key: TURSO_DATABASE_URL
+        value: https://engiverse-rushanth.aws-ap-south-1.turso.io
+      - key: TURSO_AUTH_TOKEN
+        sync: false
+      - key: ADMIN_EMAIL
+        value: saicharanbhuthkuri468@gmail.com
+      - key: ADMIN_PASSWORD
+        sync: false
+      - key: CORS_ORIGIN
+        value: "*"

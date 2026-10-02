@@ -20,8 +20,20 @@ initDatabase();
 realtimeEngine.init(server);
 
 /* ==========================================================================
-   HEALTH CHECK
+   HEALTH CHECKS
    ========================================================================== */
+app.get('/', (_req: Request, res: Response) => {
+  res.json({
+    status: 'ok',
+    service: 'Engiverse Backend API & Realtime Server',
+    version: '1.0.0',
+    endpoints: {
+      health: '/api/health',
+      realtimeWebSocket: '/ws'
+    }
+  });
+});
+
 app.get('/api/health', (_req: Request, res: Response) => {
   res.json({ status: 'ok', service: 'Engiverse Backend API', timestamp: new Date() });
 });
@@ -1025,7 +1037,7 @@ app.get('/api/daily-quiz/history/:userEmail', async (req: Request, res: Response
   }
 });
 
-// Start HTTP + WebSocket Server on port 5000
-server.listen(PORT, () => {
-  console.log(`[Server] Engiverse Backend API & WebSocket Server running at http://localhost:${PORT}`);
+// Start HTTP + WebSocket Server
+server.listen(Number(PORT), '0.0.0.0', () => {
+  console.log(`[Server] Engiverse Backend API & WebSocket Server running on port ${PORT}`);
 });

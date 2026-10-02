@@ -60,10 +60,28 @@ class RealtimeWebSocketClient {
     this.isExplicitlyClosed = false;
     this.initCurrentUser();
 
-    const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-    // Connect to port 5000 in dev or same host
-    const host = window.location.hostname === 'localhost' ? 'localhost:5000' : window.location.host;
-    const wsUrl = `${protocol}//${host}/ws`;
+    const envWsUrl = (import.meta as unknown as { env?: { VITE_WS_URL?: string } }).env?.VITE_WS_URL;
+    let wsUrl = envWsUrl;
+
+    if (!wsUrl) {
+      const envApiUrl = (import.meta as unknown as { env?: { VITE_API_URL?: string } }).env?.VITE_API_URL;
+      if (envApiUrl && !envApiUrl.includes('localhost')) {
+        try {
+          const parsed = new URL(envApiUrl);
+          const wsProtocol = parsed.protocol === 'https:' ? 'wss:' : 'ws:';
+          wsUrl = `${wsProtocol}//${parsed.host}/ws`;
+        } catch {
+          // fallback to default
+        }
+      }
+    }
+
+    if (!wsUrl) {
+      const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+      // Connect to port 5000 in dev or same host
+      const host = window.location.hostname === 'localhost' ? 'localhost:5000' : window.location.host;
+      wsUrl = `${protocol}//${host}/ws`;
+    }
 
     try {
       this.ws = new WebSocket(wsUrl);

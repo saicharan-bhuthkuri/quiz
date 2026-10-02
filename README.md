@@ -157,6 +157,87 @@ npm run dev
 
 ---
 
+## 🌐 Production Deployment Guide
+
+**Engiverse** is architected for decoupled cloud hosting:
+- **Frontend**: Hosted on **Firebase Hosting** (High-speed CDN, SPA rewrites, global edge SSL)
+- **Backend**: Hosted on **Render** (Node.js Express API + Real-Time WebSocket Server + Turso Cloud DB)
+
+### 1. Deploy Backend to Render
+
+#### Option A: One-Click Blueprint Deployment (Recommended)
+1. Navigate to the [Render Dashboard](https://dashboard.render.com/).
+2. Click **New +** &rarr; **Blueprint**.
+3. Connect your repository: `saicharan-bhuthkuri/quiz`.
+4. Render automatically parses [`render.yaml`](render.yaml) and pre-configures:
+   - **Service Name**: `engiverse-backend`
+   - **Environment**: Node
+   - **Root Directory**: `backend`
+   - **Build Command**: `npm install && npm run build`
+   - **Start Command**: `npm run start`
+   - **Health Check Path**: `/api/health`
+5. Supply your secure credentials when prompted:
+   - `TURSO_AUTH_TOKEN`: Your Turso Cloud database auth token
+   - `ADMIN_PASSWORD`: Your admin password
+6. Click **Apply**. Render will automatically build, deploy, and provision your live backend.
+7. Copy your assigned service URL (e.g., `https://engiverse-backend.onrender.com`).
+
+#### Option B: Manual Web Service Setup
+1. In Render, click **New +** &rarr; **Web Service**.
+2. Select repository `saicharan-bhuthkuri/quiz`.
+3. Set **Root Directory** to `backend`.
+4. Set **Build Command** to `npm install && npm run build`.
+5. Set **Start Command** to `npm run start`.
+6. Add Environment Variables:
+   - `PORT`: `10000`
+   - `NODE_ENV`: `production`
+   - `TURSO_DATABASE_URL`: `https://engiverse-rushanth.aws-ap-south-1.turso.io`
+   - `TURSO_AUTH_TOKEN`: `<your_turso_token>`
+   - `ADMIN_EMAIL`: `saicharanbhuthkuri468@gmail.com`
+   - `ADMIN_PASSWORD`: `<your_admin_password>`
+   - `CORS_ORIGIN`: `*`
+7. Click **Create Web Service**.
+
+---
+
+### 2. Deploy Frontend to Firebase Hosting
+
+#### Step 1: Configure Backend Target URL
+In [`frontend/.env.production`](frontend/.env.production), configure your Render backend URL:
+```env
+VITE_API_URL=https://engiverse-backend.onrender.com/api
+VITE_WS_URL=wss://engiverse-backend.onrender.com/ws
+```
+
+#### Step 2: Build Frontend Production Assets
+```bash
+cd frontend
+npm run build
+```
+This generates the optimized production bundle inside `frontend/dist/`.
+
+#### Step 3: Deploy to Firebase Hosting
+```bash
+# 1. Login to Firebase (opens browser for Google authentication)
+firebase login
+
+# 2. Select or create project "engiverse"
+firebase use engiverse
+
+# 3. Deploy
+firebase deploy --only hosting
+```
+> Or directly run from `frontend`:
+> ```bash
+> npm run deploy:firebase
+> ```
+
+Your frontend is now live at:
+- `https://engiverse.web.app`
+- `https://engiverse.firebaseapp.com`
+
+---
+
 ## 📡 API Endpoints
 
 ### Health & Analytics

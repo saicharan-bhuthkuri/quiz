@@ -719,12 +719,12 @@ export function renderAdminDashboardView(
 
                   <div class="form-group" style="margin-bottom: 1rem;">
                     <label class="form-label">Engineer Name</label>
-                    <input type="text" id="quick-reg-name" class="auth-input" placeholder="e.g. Sai Charan" required />
+                    <input type="text" id="quick-reg-name" class="auth-input" placeholder="e.g. Charan" required />
                   </div>
 
                   <div class="form-group" style="margin-bottom: 1.25rem;">
                     <label class="form-label">Engineer Email</label>
-                    <input type="email" id="quick-reg-email" class="auth-input" placeholder="e.g. saicharan@gmail.com" required />
+                    <input type="email" id="quick-reg-email" class="auth-input" placeholder="e.g. charan@gmail.com" required />
                   </div>
 
                   <button type="submit" id="btn-submit-quick-reg" class="btn btn-primary btn-pill" style="width: 100%; justify-content: center;">
@@ -1619,6 +1619,13 @@ export function renderAdminDashboardView(
       tabBtnAddEvent?.classList.add('active');
       if (viewAddEventTab) viewAddEventTab.style.display = 'block';
       if (topbarPageLabel) topbarPageLabel.textContent = 'Event Management / Add & Remove Events';
+      if (tab === 'remove-event') {
+        const btnRemove = container.querySelector<HTMLButtonElement>('#btn-mode-remove');
+        btnRemove?.click();
+      } else {
+        const btnCreate = container.querySelector<HTMLButtonElement>('#btn-mode-create');
+        btnCreate?.click();
+      }
       renderAddEventPageRecent();
       renderRemoveEventsPageTable();
     } else if (tab === 'event-register') {
@@ -1812,7 +1819,7 @@ export function renderAdminDashboardView(
         try {
           const directUsers = await getAllUsersFromTurso();
           if (directUsers && directUsers.length > 0) {
-            allUsers = directUsers.map((u: any) => ({
+            allUsers = directUsers.map(u => ({
               id: u.id,
               name: u.name,
               email: u.email,
@@ -2145,13 +2152,12 @@ export function renderAdminDashboardView(
           </td>
           <td class="admin-date-cell">${formatDate(adm.createdAt)}</td>
           <td style="text-align: right;">
-            ${
-              isPrimarySuper
-                ? `<span class="protected-badge" title="Primary Superadmin account cannot be removed">${icon('Lock', 12)} Protected</span>`
-                : `<button class="btn-action-delete btn-remove-admin" data-id="${adm.id}" data-name="${escapeHtml(adm.name)}" title="Remove administrator access">
+            ${isPrimarySuper
+            ? `<span class="protected-badge" title="Primary Superadmin account cannot be removed">${icon('Lock', 12)} Protected</span>`
+            : `<button class="btn-action-delete btn-remove-admin" data-id="${adm.id}" data-name="${escapeHtml(adm.name)}" title="Remove administrator access">
                     ${icon('Trash2', 13)} Remove
                   </button>`
-            }
+          }
           </td>
         </tr>
       `;
@@ -2502,8 +2508,8 @@ export function renderAdminDashboardView(
       const statusBadge = isLive
         ? `<span class="event-status-chip live"><span class="pulse-dot"></span> LIVE NOW</span>`
         : ev.status === 'COMPLETED'
-        ? `<span class="event-status-chip ended">COMPLETED</span>`
-        : `<span class="event-status-chip upcoming">UPCOMING</span>`;
+          ? `<span class="event-status-chip ended">COMPLETED</span>`
+          : `<span class="event-status-chip upcoming">UPCOMING</span>`;
 
       return `
         <tr>
@@ -2672,6 +2678,9 @@ export function renderAdminDashboardView(
           filterAndRenderEvents();
         }
 
+        renderAddEventPageRecent();
+        renderRemoveEventsPageTable();
+
         if (allEventsModal && allEventsModal.style.display !== 'none') {
           renderAllEventsModalTable();
         }
@@ -2776,15 +2785,101 @@ export function renderAdminDashboardView(
     if (e.target === participantsModal) hideParticipantsModal();
   });
 
-  // Add Event Dedicated Page Form Handler
+  // Add Event Dedicated Page Form Handler & Studio Logic
   const formAddEventPage = container.querySelector<HTMLFormElement>('#form-add-event-page');
+  const pageTitleInput = container.querySelector<HTMLInputElement>('#page-event-title');
+  const pageDescInput = container.querySelector<HTMLInputElement>('#page-event-desc');
+  const pageDomainInput = container.querySelector<HTMLSelectElement>('#page-event-domain');
+  const pageTimerInput = container.querySelector<HTMLInputElement>('#page-event-timer');
+
+  const previewTitle = container.querySelector<HTMLElement>('#preview-event-title');
+  const previewDesc = container.querySelector<HTMLElement>('#preview-event-desc');
+  const previewDomain = container.querySelector<HTMLElement>('#preview-event-domain');
+  const previewTimer = container.querySelector<HTMLElement>('#preview-event-timer');
+
+  const syncLivePreview = () => {
+    if (previewTitle) {
+      const val = pageTitleInput?.value.trim();
+      previewTitle.textContent = val || 'National Robotics & AI Championship 2026';
+    }
+    if (previewDesc) {
+      const val = pageDescInput?.value.trim();
+      previewDesc.textContent = val || 'Synchronized live engineering challenge across multi-round problem sets.';
+    }
+    if (previewDomain) {
+      const selectedOption = pageDomainInput?.options[pageDomainInput.selectedIndex];
+      previewDomain.textContent = selectedOption ? (selectedOption.textContent || pageDomainInput.value) : 'Computer Systems & AI';
+    }
+    if (previewTimer) {
+      const val = pageTimerInput?.value || '30';
+      previewTimer.textContent = `${val}s / Question`;
+    }
+  };
+
+  pageTitleInput?.addEventListener('input', syncLivePreview);
+  pageDescInput?.addEventListener('input', syncLivePreview);
+  pageDomainInput?.addEventListener('change', syncLivePreview);
+  pageTimerInput?.addEventListener('input', () => {
+    syncLivePreview();
+    const currentVal = pageTimerInput.value;
+    container.querySelectorAll<HTMLButtonElement>('.timer-preset-btn').forEach(btn => {
+      btn.classList.toggle('active', btn.getAttribute('data-seconds') === currentVal);
+    });
+  });
+
+  // Timer Preset Buttons
+  container.querySelectorAll<HTMLButtonElement>('.timer-preset-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      soundEngine.playClick();
+      const secs = btn.getAttribute('data-seconds');
+      if (secs && pageTimerInput) {
+        pageTimerInput.value = secs;
+        container.querySelectorAll<HTMLButtonElement>('.timer-preset-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        syncLivePreview();
+      }
+    });
+  });
+
+  // Segmented Mode Switcher (Create Event vs Remove Events)
+  const btnModeCreate = container.querySelector<HTMLButtonElement>('#btn-mode-create');
+  const btnModeRemove = container.querySelector<HTMLButtonElement>('#btn-mode-remove');
+  const subviewCreate = container.querySelector<HTMLElement>('#ops-subview-create');
+  const subviewRemove = container.querySelector<HTMLElement>('#ops-subview-remove');
+
+  btnModeCreate?.addEventListener('click', () => {
+    soundEngine.playClick();
+    btnModeCreate.classList.add('active');
+    btnModeRemove?.classList.remove('active');
+    if (subviewCreate) subviewCreate.style.display = 'grid';
+    if (subviewRemove) subviewRemove.style.display = 'none';
+  });
+
+  btnModeRemove?.addEventListener('click', () => {
+    soundEngine.playClick();
+    btnModeRemove.classList.add('active');
+    btnModeCreate?.classList.remove('active');
+    if (subviewCreate) subviewCreate.style.display = 'none';
+    if (subviewRemove) subviewRemove.style.display = 'block';
+    renderRemoveEventsPageTable();
+  });
+
+  formAddEventPage?.addEventListener('reset', () => {
+    setTimeout(() => {
+      container.querySelectorAll<HTMLButtonElement>('.timer-preset-btn').forEach(b => {
+        b.classList.toggle('active', b.getAttribute('data-seconds') === '30');
+      });
+      syncLivePreview();
+    }, 10);
+  });
+
   formAddEventPage?.addEventListener('submit', async (e) => {
     e.preventDefault();
     soundEngine.playClick();
-    const title = (container.querySelector<HTMLInputElement>('#page-event-title')?.value || '').trim();
-    const description = (container.querySelector<HTMLInputElement>('#page-event-desc')?.value || '').trim();
-    const domain = container.querySelector<HTMLSelectElement>('#page-event-domain')?.value || 'Computer Systems';
-    const timerSeconds = Number(container.querySelector<HTMLInputElement>('#page-event-timer')?.value || 30);
+    const title = (pageTitleInput?.value || '').trim();
+    const description = (pageDescInput?.value || '').trim();
+    const domain = pageDomainInput?.value || 'Computer Systems';
+    const timerSeconds = Number(pageTimerInput?.value || 30);
     const submitBtn = container.querySelector<HTMLButtonElement>('#btn-submit-page-add-event');
 
     if (!title) {
@@ -2794,15 +2889,16 @@ export function renderAdminDashboardView(
 
     if (submitBtn) {
       submitBtn.disabled = true;
-      submitBtn.textContent = 'Creating Event...';
+      submitBtn.textContent = 'Publishing Event...';
     }
 
     try {
       const res = await apiCreateEvent({ title, description, domain, timerSeconds });
       if (res.success && res.event) {
         soundEngine.playCorrect();
-        showToast(`Event "${title}" created successfully!`, 'success');
+        showToast(`Event "${title}" published & synchronized!`, 'success');
         formAddEventPage.reset();
+        syncLivePreview();
         await loadEventsData();
         renderAddEventPageRecent();
       } else {
@@ -2814,7 +2910,7 @@ export function renderAdminDashboardView(
     } finally {
       if (submitBtn) {
         submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>${icon('PlusCircle', 15)} Create &amp; Broadcast Event</span>`;
+        submitBtn.innerHTML = `<span>${icon('PlusCircle', 15)} Publish &amp; Broadcast Event</span>`;
       }
     }
   });
@@ -2822,16 +2918,38 @@ export function renderAdminDashboardView(
   function renderAddEventPageRecent() {
     const list = container.querySelector<HTMLElement>('#add-page-recent-events-list');
     const badge = container.querySelector<HTMLElement>('#add-page-events-count');
-    if (badge) badge.textContent = `${allEvents.length} Events`;
+    const opsBadge = container.querySelector<HTMLElement>('#ops-events-badge');
+    const removeBadge = container.querySelector<HTMLElement>('#badge-ops-remove-count');
+    const metricTotal = container.querySelector<HTMLElement>('#metric-ops-total-events');
+    const metricLive = container.querySelector<HTMLElement>('#metric-ops-live-events');
+    const metricUsers = container.querySelector<HTMLElement>('#metric-ops-enrolled-users');
+    const metricAvgTimer = container.querySelector<HTMLElement>('#metric-ops-avg-timer');
+
+    const totalEvents = allEvents.length;
+    if (badge) badge.textContent = `${totalEvents} Events`;
+    if (opsBadge) opsBadge.textContent = `${totalEvents} Events Total`;
+    if (removeBadge) removeBadge.textContent = totalEvents.toString();
+    if (metricTotal) metricTotal.textContent = totalEvents.toString();
+
+    const liveCount = allEvents.filter(e => e.status === 'LIVE_NOW' || e.status === 'LOBBY' || e.status === 'QUESTION_ACTIVE').length;
+    if (metricLive) metricLive.textContent = liveCount.toString();
+
+    const totalRegistered = allEvents.reduce((acc, ev) => acc + (ev.registrationCount || 0), 0);
+    if (metricUsers) metricUsers.textContent = totalRegistered.toLocaleString();
+
+    const totalSeconds = allEvents.reduce((acc, ev) => acc + (ev.timerSeconds || 30), 0);
+    const avgTimer = totalEvents > 0 ? Math.round(totalSeconds / totalEvents) : 30;
+    if (metricAvgTimer) metricAvgTimer.textContent = `${avgTimer}s`;
+
     if (!list) return;
 
     if (allEvents.length === 0) {
-      list.innerHTML = `<span style="color: var(--text-muted); font-size: 0.85rem;">No events created yet. Use the form to create your first event!</span>`;
+      list.innerHTML = `<span style="color: var(--text-muted); font-size: 0.85rem;">No events created yet. Use the form to launch your first event!</span>`;
       return;
     }
 
     list.innerHTML = allEvents.slice(0, 8).map(ev => `
-      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.85rem; background: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border-card);">
+      <div style="display: flex; align-items: center; justify-content: space-between; padding: 0.65rem 0.85rem; background: #f8fafc; border-radius: var(--radius-md); border: 1px solid var(--border-card); transition: transform 0.15s ease;">
         <div style="display: flex; flex-direction: column; gap: 0.15rem; min-width: 0;">
           <strong style="font-size: 0.88rem; color: var(--text-main); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 240px;">${escapeHtml(ev.title)}</strong>
           <span style="font-size: 0.75rem; color: var(--text-muted);">${escapeHtml(ev.domain || 'Engineering')} &bull; ${ev.questionCount || 0} Qs &bull; ${ev.timerSeconds || 30}s</span>
@@ -2894,8 +3012,8 @@ export function renderAdminDashboardView(
       const statusBadge = isLive
         ? `<span class="event-status-chip live"><span class="pulse-dot"></span> LIVE NOW</span>`
         : ev.status === 'COMPLETED'
-        ? `<span class="event-status-chip ended">COMPLETED</span>`
-        : `<span class="event-status-chip upcoming">UPCOMING</span>`;
+          ? `<span class="event-status-chip ended">COMPLETED</span>`
+          : `<span class="event-status-chip upcoming">UPCOMING</span>`;
 
       return `
         <tr>
@@ -2950,8 +3068,8 @@ export function renderAdminDashboardView(
 
     const filtered = allEvents.filter(ev => {
       const matchQ = ev.title.toLowerCase().includes(q) ||
-                     (ev.domain || '').toLowerCase().includes(q) ||
-                     (ev.description || '').toLowerCase().includes(q);
+        (ev.domain || '').toLowerCase().includes(q) ||
+        (ev.description || '').toLowerCase().includes(q);
       const matchSt = st === 'ALL' || ev.status === st;
       return matchQ && matchSt;
     });
@@ -2981,8 +3099,8 @@ export function renderAdminDashboardView(
       const statusBadge = isLive
         ? `<span class="event-status-chip live"><span class="pulse-dot"></span> LIVE NOW</span>`
         : ev.status === 'COMPLETED'
-        ? `<span class="event-status-chip ended">COMPLETED</span>`
-        : `<span class="event-status-chip upcoming">UPCOMING</span>`;
+          ? `<span class="event-status-chip ended">COMPLETED</span>`
+          : `<span class="event-status-chip upcoming">UPCOMING</span>`;
 
       return `
         <tr>
@@ -3398,15 +3516,15 @@ export function renderAdminDashboardView(
             </h4>
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 0.5rem;">
               ${hostCurrentQuestion.options.map((opt: string, i: number) => {
-                const isCorrect = i === hostCurrentQuestion?.correctOption;
-                return `
+      const isCorrect = i === hostCurrentQuestion?.correctOption;
+      return `
                   <div style="display: flex; align-items: center; gap: 0.5rem; padding: 0.5rem 0.75rem; border-radius: 8px; font-size: 0.85rem; background: ${isCorrect ? '#dcfce7' : '#ffffff'}; border: 1px solid ${isCorrect ? '#86efac' : 'var(--border-card)'}; color: ${isCorrect ? '#15803d' : 'var(--text-main)'}; font-weight: ${isCorrect ? '700' : '500'};">
                     <span style="font-weight: 800;">${String.fromCharCode(65 + i)}:</span>
                     <span>${escapeHtml(opt)}</span>
                     ${isCorrect ? `<span style="margin-left: auto;">${icon('Check', 12)}</span>` : ''}
                   </div>
                 `;
-              }).join('')}
+    }).join('')}
             </div>
           </div>
         ` : ''}
@@ -3683,8 +3801,8 @@ export function renderAdminDashboardView(
       const statusBadge = isLive
         ? `<span class="event-status-chip live"><span class="pulse-dot"></span> LIVE NOW</span>`
         : ev.status === 'COMPLETED'
-        ? `<span class="event-status-chip ended">COMPLETED</span>`
-        : `<span class="event-status-chip upcoming">UPCOMING</span>`;
+          ? `<span class="event-status-chip ended">COMPLETED</span>`
+          : `<span class="event-status-chip upcoming">UPCOMING</span>`;
 
       if (regStatsContainer) {
         regStatsContainer.innerHTML = `
@@ -4320,14 +4438,14 @@ export function renderAdminDashboardView(
               <div style="display: flex; flex-direction: column; gap: 0.35rem;">
                 <div class="qm-options-list">
                   ${item.options.map((opt, oIdx) => {
-                    const isCorrect = oIdx === correctIdx;
-                    return `
+          const isCorrect = oIdx === correctIdx;
+          return `
                       <span class="qm-option-row ${isCorrect ? 'correct' : ''}">
                         <strong>${String.fromCharCode(65 + oIdx)}:</strong> ${escapeHtml(opt)}
                         ${isCorrect ? `<span class="opt-check">${icon('Check', 11)}</span>` : ''}
                       </span>
                     `;
-                  }).join('')}
+        }).join('')}
                 </div>
                 <span style="font-size: 0.76rem; font-weight: 700; color: #15803d; display: flex; align-items: center; gap: 0.25rem;">
                   ${icon('CheckCircle2', 12)} Correct: Option ${correctLetter}
@@ -4815,8 +4933,8 @@ export function renderAdminDashboardView(
 
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                   ${examCurrentQuestion.options.map((opt, oIdx) => {
-                    const isCorrect = oIdx === (examCurrentQuestion?.correctOption ?? 0);
-                    return `
+        const isCorrect = oIdx === (examCurrentQuestion?.correctOption ?? 0);
+        return `
                       <div style="background: ${isCorrect ? '#f0fdf4' : '#f8fafc'}; border: 1.5px solid ${isCorrect ? '#86efac' : 'var(--border-card)'}; border-radius: var(--radius-md); padding: 0.75rem 1rem; display: flex; align-items: center; justify-content: space-between;">
                         <span style="font-size: 0.9rem; font-weight: 600; color: var(--text-main);">
                           <strong style="color: ${isCorrect ? '#15803d' : '#64748b'};">${String.fromCharCode(65 + oIdx)}:</strong> ${escapeHtml(opt)}
@@ -4824,7 +4942,7 @@ export function renderAdminDashboardView(
                         ${isCorrect ? `<span style="color: #15803d; font-weight: 700; font-size: 0.75rem; display: flex; align-items: center; gap: 0.2rem;">${icon('Check', 12)} Correct</span>` : ''}
                       </div>
                     `;
-                  }).join('')}
+      }).join('')}
                 </div>
               </div>
             ` : `
@@ -5024,8 +5142,8 @@ export function renderAdminDashboardView(
         sbStatusPill.innerHTML = isLive
           ? `<span class="event-status-chip live"><span class="pulse-dot"></span> LIVE SYNCHRONIZED</span>`
           : isCompleted
-          ? `<span class="event-status-chip ended">FINAL OFFICIAL RESULTS</span>`
-          : `<span class="event-status-chip upcoming">UPCOMING</span>`;
+            ? `<span class="event-status-chip ended">FINAL OFFICIAL RESULTS</span>`
+            : `<span class="event-status-chip upcoming">UPCOMING</span>`;
       }
 
       const p1 = sbLeaderboard[0];

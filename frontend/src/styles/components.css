@@ -5940,5 +5940,49 @@
   font-weight: 600;
 }
 
+/* =========================================================================
+   SEPARATED DAILY DASHBOARD & EVENT DASHBOARD STYLES
+   ========================================================================= */
+.sidebar-group-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0.4rem 0.75rem 0.2rem 0.75rem;
+  margin-top: 0.5rem;
+}
+
+.sidebar-group-chip {
+  font-size: 0.65rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  padding: 0.15rem 0.45rem;
+  border-radius: 999px;
+  letter-spacing: 0.04em;
+}
+
+.daily-chip {
+  background: #eef2ff;
+  color: #4f46e5;
+  border: 1px solid #c7d2fe;
+}
+
+.event-chip {
+  background: #ede9fe;
+  color: #7c3aed;
+  border: 1px solid #ddd6fe;
+}
+
+.edash-module-card:hover {
+  border-color: #6366f1 !important;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(99, 102, 241, 0.12);
+}
+
+@media (max-width: 900px) {
+  .edash-grid-split {
+    grid-template-columns: 1fr !important;
+  }
+}
+
 
 

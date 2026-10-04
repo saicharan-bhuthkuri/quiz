@@ -1045,6 +1045,170 @@ app.get('/api/daily-quiz/history/:userEmail', async (req: Request, res: Response
   }
 });
 
+// 14. Dedicated Daily Dashboard API (Completely independent of events)
+app.get('/api/admin/daily-dashboard', async (_req: Request, res: Response) => {
+  try {
+    const totalAttemptsRes = await db.execute('SELECT COUNT(*) as total_attempts FROM daily_quiz_attempts;');
+    const totalXpRes = await db.execute('SELECT SUM(xp_earned) as total_xp FROM daily_quiz_attempts;');
+    const avgAccuracyRes = await db.execute('SELECT AVG(accuracy) as avg_accuracy FROM daily_quiz_attempts;');
+    const todayAttemptsRes = await db.execute("SELECT COUNT(*) as today_attempts FROM daily_quiz_attempts WHERE date(created_at) = date('now');");
+    
+    const activeStreaksRes = await db.execute('SELECT COUNT(*) as streak_users FROM users WHERE streak > 0;');
+    const totalUsersRes = await db.execute('SELECT COUNT(*) as total_users FROM users;');
+
+    const topicRes = await db.execute(`
+      SELECT 
+        quiz_topic, 
+        COUNT(*) as attempts, 
+        ROUND(AVG(accuracy), 1) as avg_accuracy, 
+        SUM(xp_earned) as total_xp 
+      FROM daily_quiz_attempts 
+      GROUP BY quiz_topic 
+      ORDER BY attempts DESC;
+    `);
+
+    const recentRes = await db.execute(`
+      SELECT id, user_id, user_name, user_email, quiz_topic, score, total_questions, xp_earned, accuracy, time_taken_seconds, created_at
+      FROM daily_quiz_attempts
+      ORDER BY created_at DESC
+      LIMIT 50;
+    `);
+
+    const streakLeadersRes = await db.execute(`
+      SELECT id, name, email, streak, xp, branch, year
+      FROM users
+      WHERE streak > 0
+      ORDER BY streak DESC, xp DESC
+      LIMIT 10;
+    `);
+
+    return res.json({
+      success: true,
+      metrics: {
+        totalAttempts: Number(totalAttemptsRes.rows[0]?.total_attempts || 0),
+        todayAttempts: Number(todayAttemptsRes.rows[0]?.today_attempts || 0),
+        totalXpDistributed: Number(totalXpRes.rows[0]?.total_xp || 0),
+        averageAccuracy: Math.round(Number(avgAccuracyRes.rows[0]?.avg_accuracy || 0)),
+        activeStreaksCount: Number(activeStreaksRes.rows[0]?.streak_users || 0),
+        totalUsers: Number(totalUsersRes.rows[0]?.total_users || 0)
+      },
+      topics: topicRes.rows.map(r => ({
+        topic: String(r.quiz_topic),
+        attempts: Number(r.attempts),
+        avgAccuracy: Number(r.avg_accuracy),
+        totalXp: Number(r.total_xp)
+      })),
+      recentAttempts: recentRes.rows.map(r => ({
+        id: String(r.id),
+        userId: String(r.user_id),
+        userName: String(r.user_name || 'Engineer'),
+        userEmail: String(r.user_email),
+        quizTopic: String(r.quiz_topic),
+        score: Number(r.score),
+        totalQuestions: Number(r.total_questions),
+        xpEarned: Number(r.xp_earned),
+        accuracy: Number(r.accuracy),
+        timeTakenSeconds: Number(r.time_taken_seconds || 0),
+        createdAt: String(r.created_at)
+      })),
+      streakLeaders: streakLeadersRes.rows.map(r => ({
+        id: String(r.id),
+        name: String(r.name),
+        email: String(r.email),
+        streak: Number(r.streak),
+        xp: Number(r.xp),
+        branch: String(r.branch || 'Engineering'),
+        year: String(r.year || '—')
+      }))
+    });
+  } catch (error: any) {
+    console.error('Daily dashboard fetch error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch daily dashboard data' });
+  }
+});
+
+// 15. Dedicated Event Dashboard API (Strictly limited to the selected event only)
+app.get('/api/admin/event-dashboard/:eventId', async (req: Request, res: Response) => {
+  try {
+    const { eventId } = req.params;
+
+    const evRes = await db.execute({
+      sql: 'SELECT * FROM events WHERE id = ? LIMIT 1;',
+      args: [eventId]
+    });
+
+    if (evRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Event not found' });
+    }
+    const ev = evRes.rows[0];
+
+    const regRes = await db.execute({
+      sql: `SELECT id, user_id, user_name, user_email, registered_at
+            FROM event_registrations
+            WHERE event_id = ? AND user_id NOT LIKE 'adm_%'
+            ORDER BY registered_at DESC;`,
+      args: [eventId]
+    });
+
+    const registeredUsers = regRes.rows.map(r => ({
+      id: String(r.id),
+      userId: String(r.user_id),
+      userName: String(r.user_name),
+      userEmail: String(r.user_email),
+      registeredAt: String(r.registered_at)
+    }));
+
+    const liveAttendance = realtimeEngine.getRoomAttendance(eventId);
+
+    const qRes = await db.execute({
+      sql: 'SELECT id, question_text, points, timer_seconds, question_order FROM event_questions WHERE event_id = ? ORDER BY question_order ASC;',
+      args: [eventId]
+    });
+
+    const answersRes = await db.execute({
+      sql: 'SELECT COUNT(*) as total_answers, COUNT(DISTINCT user_id) as distinct_responders FROM event_answers WHERE event_id = ?;',
+      args: [eventId]
+    });
+
+    const state = await realtimeEngine.getOrLoadEventState(eventId);
+    const leaderboard = state ? realtimeEngine.getLeaderboard(state) : [];
+
+    return res.json({
+      success: true,
+      event: {
+        id: String(ev.id),
+        title: String(ev.title),
+        description: String(ev.description || ''),
+        domain: String(ev.domain || 'General Engineering'),
+        status: String(ev.status || 'UPCOMING'),
+        timerSeconds: Number(ev.timer_seconds || 30),
+        currentQuestionIndex: Number(ev.current_question_index ?? -1),
+        createdAt: String(ev.created_at || '')
+      },
+      metrics: {
+        registeredCount: registeredUsers.length,
+        connectedAttendanceCount: liveAttendance.length,
+        questionCount: qRes.rows.length,
+        totalAnswers: Number(answersRes.rows[0]?.total_answers || 0),
+        activeParticipants: Number(answersRes.rows[0]?.distinct_responders || 0)
+      },
+      registrations: registeredUsers,
+      attendance: liveAttendance,
+      questions: qRes.rows.map(q => ({
+        id: String(q.id),
+        questionText: String(q.question_text),
+        points: Number(q.points),
+        timerSeconds: Number(q.timer_seconds),
+        order: Number(q.question_order)
+      })),
+      leaderboard
+    });
+  } catch (error: any) {
+    console.error('Event dashboard fetch error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch event dashboard data' });
+  }
+});
+
 // Start HTTP + WebSocket Server
 server.listen(Number(PORT), '0.0.0.0', () => {
   console.log(`[Server] Engiverse Backend API & WebSocket Server running on port ${PORT}`);

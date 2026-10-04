@@ -17,6 +17,12 @@ import {
   apiRegisterForEvent,
   apiUnregisterEventParticipant,
   apiGetEventLeaderboard,
+  apiGetDailyDashboard,
+  apiGetEventDashboard,
+  DailyDashboardData,
+  EventDashboardData,
+  DailyAttemptRecord,
+  DailyTopicStat,
   QuizEvent,
   EventQuestion,
   EventParticipant,
@@ -71,9 +77,19 @@ export function renderAdminDashboardView(
 
         <!-- Navigation Tabs Menu -->
         <nav class="sidebar-nav-menu">
-          <span class="sidebar-group-label">WORKSPACE</span>
+          <!-- ================= 1. DAILY DASHBOARD (OPERATIONS & USERS) ================= -->
+          <div class="sidebar-group-header">
+            <span class="sidebar-group-label">DAILY DASHBOARD</span>
+            <span class="sidebar-group-chip daily-chip">Daily Ops</span>
+          </div>
           
-          <button class="sidebar-nav-btn active" id="tab-btn-users" data-tab="users">
+          <button class="sidebar-nav-btn active" id="tab-btn-daily-dashboard" data-tab="daily-dashboard">
+            <span class="nav-btn-icon">${icon('Activity', 18)}</span>
+            <span class="nav-btn-text">Daily Overview</span>
+            <span class="nav-count-badge" id="badge-daily-attempts">0</span>
+          </button>
+
+          <button class="sidebar-nav-btn" id="tab-btn-users" data-tab="users">
             <span class="nav-btn-icon">${icon('Users', 18)}</span>
             <span class="nav-btn-text">Users Directory</span>
             <span class="nav-count-badge" id="badge-users-count">0</span>
@@ -85,7 +101,17 @@ export function renderAdminDashboardView(
             <span class="nav-count-badge" id="badge-admins-count">0</span>
           </button>
 
-          <span class="sidebar-group-label" style="margin-top: 1.25rem;">EVENT MANAGEMENT</span>
+          <!-- ================= 2. EVENT DASHBOARD (COMPETITIONS & EXAMS) ================= -->
+          <div class="sidebar-group-header" style="margin-top: 1.35rem;">
+            <span class="sidebar-group-label">EVENT DASHBOARD</span>
+            <span class="sidebar-group-chip event-chip">Events Only</span>
+          </div>
+
+          <button class="sidebar-nav-btn" id="tab-btn-event-dashboard" data-tab="event-dashboard">
+            <span class="nav-btn-icon">${icon('LayoutDashboard', 18)}</span>
+            <span class="nav-btn-text">Event Overview</span>
+            <span class="pulse-dot" id="sidebar-event-live-dot" style="display: none; margin-left: auto;"></span>
+          </button>
 
           <button class="sidebar-nav-btn" id="tab-btn-event-register" data-tab="event-register">
             <span class="nav-btn-icon">${icon('UserPlus', 18)}</span>
@@ -143,7 +169,7 @@ export function renderAdminDashboardView(
             <div class="topbar-breadcrumb">
               <span class="breadcrumb-root">Admin Console</span>
               <span class="breadcrumb-slash">/</span>
-              <span class="breadcrumb-current" id="topbar-page-label">Users Directory</span>
+              <span class="breadcrumb-current" id="topbar-page-label">Daily Dashboard / Daily Overview</span>
             </div>
           </div>
 
@@ -165,8 +191,138 @@ export function renderAdminDashboardView(
 
         <!-- View Body Content -->
         <main class="admin-page-scroll">
+          <!-- ================= TAB 0: DAILY DASHBOARD (OPERATIONS & INDEPENDENT ANALYTICS) ================= -->
+          <section id="view-daily-dashboard-tab" class="admin-tab-section active">
+            <!-- Header Row -->
+            <div class="admin-section-header">
+              <div class="header-split-row">
+                <div>
+                  <div class="title-with-pill">
+                    <h1 class="admin-view-heading">Daily Operations Dashboard</h1>
+                    <span class="count-pill-modern" style="background: #eef2ff; color: #4f46e5; border-color: #c7d2fe;">Independent Daily Analytics</span>
+                  </div>
+                  <p class="admin-view-desc">Monitor daily self-paced engineering quizzes, student practice activity, streaks, and subject domain performance completely separated from live competitive events.</p>
+                </div>
+                <div class="admin-top-actions">
+                  <button id="btn-daily-refresh" class="btn btn-secondary btn-pill" title="Refresh Daily Operational Data">
+                    <span>${icon('RotateCw', 14)} Refresh Daily Data</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Daily Operational KPI Metrics Grid -->
+            <div class="admin-metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));">
+              <div class="admin-stat-card">
+                <div class="stat-icon-wrap" style="background: #eef2ff; color: #4f46e5;">${icon('Activity', 22)}</div>
+                <div class="stat-meta">
+                  <span class="stat-val" id="daily-metric-total-attempts">—</span>
+                  <span class="stat-title">Daily Quiz Attempts</span>
+                  <span class="stat-sub">Total submissions completed</span>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="stat-icon-wrap" style="background: #ecfdf5; color: #059669;">${icon('Calendar', 22)}</div>
+                <div class="stat-meta">
+                  <span class="stat-val" id="daily-metric-today-attempts">—</span>
+                  <span class="stat-title">Today's Practice</span>
+                  <span class="stat-sub">Completed today</span>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="stat-icon-wrap" style="background: #fffbeb; color: #d97706;">${icon('Flame', 22)}</div>
+                <div class="stat-meta">
+                  <span class="stat-val" id="daily-metric-active-streaks">—</span>
+                  <span class="stat-title">Active Streaks</span>
+                  <span class="stat-sub">Consecutive daily learning</span>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="stat-icon-wrap" style="background: #fdf2f8; color: #db2777;">${icon('Target', 22)}</div>
+                <div class="stat-meta">
+                  <span class="stat-val" id="daily-metric-avg-accuracy">—%</span>
+                  <span class="stat-title">Average Accuracy</span>
+                  <span class="stat-sub">Mean performance score</span>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="stat-icon-wrap" style="background: #eff6ff; color: #2563eb;">${icon('Zap', 22)}</div>
+                <div class="stat-meta">
+                  <span class="stat-val" id="daily-metric-total-xp">— XP</span>
+                  <span class="stat-title">Practice XP Distributed</span>
+                  <span class="stat-sub">Earned via daily challenges</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Engineering Domain / Topic Breakdown Cards -->
+            <div style="margin: 2rem 0;">
+              <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin: 0; display: flex; align-items: center; gap: 0.5rem;">
+                  <span style="color: #6366f1;">${icon('BookOpen', 18)}</span>
+                  Daily Engineering Domains &amp; Subject Breakdown
+                </h3>
+                <span style="font-size: 0.82rem; color: var(--text-muted); font-weight: 600;">Self-Paced Practice Tracks</span>
+              </div>
+              <div class="daily-topics-grid" id="daily-topics-container" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1rem;">
+                <!-- Populated dynamically -->
+              </div>
+            </div>
+
+            <!-- Recent Daily Quiz Submissions Table -->
+            <div class="admin-table-container" style="margin-top: 2rem;">
+              <div class="admin-toolbar">
+                <div class="admin-search-wrapper">
+                  <span class="search-icon">${icon('Search', 15)}</span>
+                  <input type="text" id="daily-search-input" class="admin-search-field" placeholder="Search daily attempts by engineer or topic..." />
+                </div>
+
+                <div class="admin-filters-group">
+                  <select id="daily-filter-topic" class="admin-select-filter">
+                    <option value="ALL">All Practice Domains</option>
+                  </select>
+                  <button id="btn-export-daily-csv" class="admin-toolbar-btn btn-export-csv" title="Export daily submissions as CSV">
+                    <span class="toolbar-btn-icon">${icon('Download', 14)}</span>
+                    <span>Export Daily CSV</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="admin-users-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 25%;">Engineer</th>
+                      <th style="width: 25%;">Practice Domain</th>
+                      <th style="width: 12%; text-align: right;">Score</th>
+                      <th style="width: 12%; text-align: right;">Accuracy</th>
+                      <th style="width: 12%; text-align: right;">XP Earned</th>
+                      <th style="width: 14%; text-align: right;">Submitted At</th>
+                    </tr>
+                  </thead>
+                  <tbody id="daily-attempts-tbody">
+                    <tr>
+                      <td colspan="6" style="text-align: center; padding: 3rem 2rem; color: var(--text-muted);">
+                        Loading daily operational attempts...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+
+              <div class="admin-table-footer">
+                <span id="daily-attempts-count-label" class="admin-table-count-text">0 submissions recorded</span>
+                <span class="admin-quick-legend">${icon('ShieldCheck', 14)} Daily challenge attempts are strictly isolated from event competition leaderboards.</span>
+              </div>
+            </div>
+          </section>
+
           <!-- ================= TAB 1: USERS DIRECTORY ================= -->
-          <section id="view-users-tab" class="admin-tab-section active">
+          <section id="view-users-tab" class="admin-tab-section" style="display: none;">
             <!-- Header Row -->
             <div class="admin-section-header">
               <div>
@@ -381,6 +537,180 @@ export function renderAdminDashboardView(
               <div class="admin-table-footer">
                 <span id="admin-count-label" class="admin-table-count-text">Authorized admin staff</span>
                 <span class="admin-quick-legend">${icon('Lock', 14)} Primary Superadministrator (<code>${escapeHtml(currentAdminEmail)}</code>) is protected.</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================= TAB 2.5: EVENT DASHBOARD (STRICTLY SELECTED EVENT ONLY) ================= -->
+          <section id="view-event-dashboard-tab" class="admin-tab-section" style="display: none;">
+            <!-- Prominent Event Selector Banner Card -->
+            <div class="event-selector-banner-card" style="margin-bottom: 1.5rem; background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.25rem 1.5rem; box-shadow: var(--shadow-sm);">
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <div style="width: 42px; height: 42px; border-radius: 10px; background: #ede9fe; color: #6d28d9; display: flex; align-items: center; justify-content: center;">
+                    ${icon('Trophy', 22)}
+                  </div>
+                  <div>
+                    <h2 style="font-size: 1.25rem; font-weight: 800; margin: 0; color: var(--text-main);">Event Dashboard</h2>
+                    <p style="font-size: 0.85rem; color: var(--text-muted); margin: 0.15rem 0 0 0;">
+                      Displaying live registrations, attendance, and scoreboard strictly for the selected competition event.
+                    </p>
+                  </div>
+                </div>
+
+                <!-- Event Selector Dropdown & Status -->
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex-wrap: wrap;">
+                  <label for="event-dash-select" style="font-size: 0.88rem; font-weight: 700; color: var(--text-main);">Active Event:</label>
+                  <select id="event-dash-select" class="admin-select-filter" style="min-width: 260px; font-weight: 700; border-color: #93c5fd; background: #f8fafc;">
+                    <!-- Dynamically populated with active events -->
+                  </select>
+                  <span id="event-dash-status-pill" class="event-status-chip upcoming">UPCOMING</span>
+                  <button id="btn-event-dash-refresh" class="btn btn-secondary btn-pill" title="Refresh Selected Event Data">
+                    <span>${icon('RotateCw', 14)} Refresh</span>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Event KPI Metrics Grid (STRICTLY FOR SELECTED EVENT ONLY) -->
+            <div class="admin-metrics-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));">
+              <div class="admin-stat-card">
+                <div class="stat-icon-wrap" style="background: #eef2ff; color: #4f46e5;">${icon('UserCheck', 22)}</div>
+                <div class="stat-meta">
+                  <span class="stat-val" id="edash-metric-registered">—</span>
+                  <span class="stat-title">Enrolled Registrations</span>
+                  <span class="stat-sub">Registered for this event</span>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="stat-icon-wrap" style="background: #ecfdf5; color: #059669;">${icon('Radio', 22)}</div>
+                <div class="stat-meta">
+                  <span class="stat-val" id="edash-metric-connected">—</span>
+                  <span class="stat-title">Room Attendance</span>
+                  <span class="stat-sub">Live connected participants</span>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="stat-icon-wrap" style="background: #fdf4ff; color: #a855f7;">${icon('HelpCircle', 22)}</div>
+                <div class="stat-meta">
+                  <span class="stat-val" id="edash-metric-questions">—</span>
+                  <span class="stat-title">Competition Questions</span>
+                  <span class="stat-sub">Curated exam questions</span>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="stat-icon-wrap" style="background: #fffbeb; color: #d97706;">${icon('Send', 22)}</div>
+                <div class="stat-meta">
+                  <span class="stat-val" id="edash-metric-submissions">—</span>
+                  <span class="stat-title">Answers Received</span>
+                  <span class="stat-sub">Live answer submissions</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Selected Event Information Card & Quick Module Links -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin: 2rem 0;" class="edash-grid-split">
+              <!-- Left: Event Specs -->
+              <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.5rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                  <span style="color: #2563eb;">${icon('Info', 18)}</span>
+                  Event Specifications
+                </h3>
+                <div style="display: flex; flex-direction: column; gap: 0.85rem;">
+                  <div>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Event Title</span>
+                    <div id="edash-info-title" style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin-top: 0.2rem;">—</div>
+                  </div>
+                  <div>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Engineering Focus Domain</span>
+                    <div id="edash-info-domain" style="font-size: 0.95rem; font-weight: 700; color: #4338ca; margin-top: 0.2rem;">—</div>
+                  </div>
+                  <div>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Timer Per Question</span>
+                    <div id="edash-info-timer" style="font-size: 0.95rem; font-weight: 700; color: var(--text-main); margin-top: 0.2rem;">— seconds</div>
+                  </div>
+                  <div>
+                    <span style="font-size: 0.78rem; font-weight: 700; color: var(--text-muted); text-transform: uppercase;">Description</span>
+                    <div id="edash-info-desc" style="font-size: 0.9rem; color: var(--text-muted); margin-top: 0.2rem; line-height: 1.4;">—</div>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Right: Quick Navigation to Event Submodules -->
+              <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-lg); padding: 1.5rem;">
+                <h3 style="font-size: 1.1rem; font-weight: 800; color: var(--text-main); margin: 0 0 1rem 0; display: flex; align-items: center; gap: 0.5rem;">
+                  <span style="color: #7c3aed;">${icon('Sliders', 18)}</span>
+                  Event Operations Modules
+                </h3>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                  <button id="edash-goto-register" class="edash-module-card" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; text-align: left; cursor: pointer; transition: all 0.2s ease;">
+                    <div style="color: #2563eb; margin-bottom: 0.5rem;">${icon('UserPlus', 20)}</div>
+                    <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-main);">Event Register</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">Enroll participants</div>
+                  </button>
+
+                  <button id="edash-goto-participants" class="edash-module-card" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; text-align: left; cursor: pointer; transition: all 0.2s ease;">
+                    <div style="color: #059669; margin-bottom: 0.5rem;">${icon('Users', 20)}</div>
+                    <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-main);">Participants</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">Attendance roster</div>
+                  </button>
+
+                  <button id="edash-goto-questions" class="edash-module-card" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; text-align: left; cursor: pointer; transition: all 0.2s ease;">
+                    <div style="color: #d97706; margin-bottom: 0.5rem;">${icon('HelpCircle', 20)}</div>
+                    <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-main);">Questions</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">Manage exam Qs</div>
+                  </button>
+
+                  <button id="edash-goto-exam" class="edash-module-card" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; text-align: left; cursor: pointer; transition: all 0.2s ease;">
+                    <div style="color: #7c3aed; margin-bottom: 0.5rem;">${icon('PlayCircle', 20)}</div>
+                    <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-main);">Exam Console</div>
+                    <div style="font-size: 0.78rem; color: var(--text-muted);">Broadcast live flow</div>
+                  </button>
+
+                  <button id="edash-goto-scoreboard" class="edash-module-card" style="grid-column: span 2; background: #fffbeb; border: 1px solid #fde68a; border-radius: var(--radius-md); padding: 1rem; text-align: left; cursor: pointer; transition: all 0.2s ease;">
+                    <div style="display: flex; align-items: center; justify-content: space-between;">
+                      <div>
+                        <div style="font-weight: 800; font-size: 0.95rem; color: #92400e;">${icon('Award', 18)} Event Scoreboard &amp; Podium</div>
+                        <div style="font-size: 0.8rem; color: #b45309; margin-top: 0.2rem;">Live synchronized rankings and CSV export for this event</div>
+                      </div>
+                      ${icon('ArrowRight', 16)}
+                    </div>
+                  </button>
+                </div>
+              </div>
+            </div>
+
+            <!-- Event Attendance & Registrations Preview Table -->
+            <div class="admin-table-container">
+              <div style="display: flex; align-items: center; justify-content: space-between; padding: 1.25rem 1.5rem; border-bottom: 1px solid var(--border-color);">
+                <div>
+                  <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0;">Enrolled Participants &amp; Room Attendance</h3>
+                  <p style="font-size: 0.82rem; color: var(--text-muted); margin: 0.2rem 0 0 0;">Real-time registration and live connection status for the selected event only.</p>
+                </div>
+                <span id="edash-preview-count" class="count-pill-modern">0 Enrolled</span>
+              </div>
+
+              <div class="table-responsive">
+                <table class="admin-users-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 40%;">Participant</th>
+                      <th style="width: 25%;">Registered Time</th>
+                      <th style="width: 20%;">Room Attendance</th>
+                      <th style="width: 15%; text-align: right;">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody id="edash-participants-tbody">
+                    <tr>
+                      <td colspan="4" style="text-align: center; padding: 3rem 2rem; color: var(--text-muted);">
+                        Loading event participants...
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
               </div>
             </div>
           </section>
@@ -1449,6 +1779,8 @@ export function renderAdminDashboardView(
 
   // State
   type AdminTab =
+    | 'daily-dashboard'
+    | 'event-dashboard'
     | 'users'
     | 'admins'
     | 'events'
@@ -1460,13 +1792,14 @@ export function renderAdminDashboardView(
     | 'event-exam'
     | 'event-scoreboard';
 
-  let activeTab: AdminTab = 'users';
+  let activeTab: AdminTab = 'daily-dashboard';
   let allUsers: AdminUserRecord[] = [];
   let allAdmins: AdminRecord[] = [];
   let allEvents: QuizEvent[] = [];
   let stats: AdminStats | null = null;
 
   // Selected event tracking across all modules
+  let edashSelectedEventId = '';
   let regSelectedEventId = '';
   let partSelectedEventId = 'ALL';
   let qmSelectedEventId = '';
@@ -1493,6 +1826,8 @@ export function renderAdminDashboardView(
   const btnCloseSidebar = container.querySelector<HTMLButtonElement>('#btn-close-sidebar');
 
   // Navigation Buttons
+  const tabBtnDailyDashboard = container.querySelector<HTMLButtonElement>('#tab-btn-daily-dashboard');
+  const tabBtnEventDashboard = container.querySelector<HTMLButtonElement>('#tab-btn-event-dashboard');
   const tabBtnUsers = container.querySelector<HTMLButtonElement>('#tab-btn-users');
   const tabBtnAdmins = container.querySelector<HTMLButtonElement>('#tab-btn-admins');
   const tabBtnEvents = container.querySelector<HTMLButtonElement>('#tab-btn-events');
@@ -1505,6 +1840,8 @@ export function renderAdminDashboardView(
   const tabBtnEventScoreboard = container.querySelector<HTMLButtonElement>('#tab-btn-event-scoreboard');
 
   // Section Views
+  const viewDailyDashboardTab = container.querySelector<HTMLElement>('#view-daily-dashboard-tab');
+  const viewEventDashboardTab = container.querySelector<HTMLElement>('#view-event-dashboard-tab');
   const viewUsersTab = container.querySelector<HTMLElement>('#view-users-tab');
   const viewAdminsTab = container.querySelector<HTMLElement>('#view-admins-tab');
   const viewEventsTab = container.querySelector<HTMLElement>('#view-events-tab');
@@ -1592,6 +1929,8 @@ export function renderAdminDashboardView(
 
     // Reset all tab button active states
     [
+      tabBtnDailyDashboard,
+      tabBtnEventDashboard,
       tabBtnUsers,
       tabBtnAdmins,
       tabBtnEvents,
@@ -1606,6 +1945,8 @@ export function renderAdminDashboardView(
 
     // Hide all tab views
     [
+      viewDailyDashboardTab,
+      viewEventDashboardTab,
       viewUsersTab,
       viewAdminsTab,
       viewEventsTab,
@@ -1620,25 +1961,35 @@ export function renderAdminDashboardView(
       if (sec) sec.style.display = 'none';
     });
 
-    if (tab === 'users') {
+    if (tab === 'daily-dashboard') {
+      tabBtnDailyDashboard?.classList.add('active');
+      if (viewDailyDashboardTab) viewDailyDashboardTab.style.display = 'block';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'Daily Dashboard / Daily Overview';
+      initDailyDashboardModule();
+    } else if (tab === 'event-dashboard') {
+      tabBtnEventDashboard?.classList.add('active');
+      if (viewEventDashboardTab) viewEventDashboardTab.style.display = 'block';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Dashboard / Event Overview';
+      initEventDashboardModule(preselectedEventId);
+    } else if (tab === 'users') {
       tabBtnUsers?.classList.add('active');
       if (viewUsersTab) viewUsersTab.style.display = 'block';
-      if (topbarPageLabel) topbarPageLabel.textContent = 'Users Directory';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'Daily Dashboard / Users Directory';
       filterAndRenderUsers();
     } else if (tab === 'admins') {
       tabBtnAdmins?.classList.add('active');
       if (viewAdminsTab) viewAdminsTab.style.display = 'block';
-      if (topbarPageLabel) topbarPageLabel.textContent = 'List of Admins';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'Daily Dashboard / List of Admins';
       renderAdminsTable();
     } else if (tab === 'events') {
       tabBtnEvents?.classList.add('active');
       if (viewEventsTab) viewEventsTab.style.display = 'block';
-      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Management / List of Events';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Dashboard / List of Events';
       loadEventsData();
     } else if (tab === 'add-event' || tab === 'remove-event') {
       tabBtnAddEvent?.classList.add('active');
       if (viewAddEventTab) viewAddEventTab.style.display = 'block';
-      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Management / Add & Remove Events';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Dashboard / Add & Remove Events';
       if (tab === 'remove-event') {
         const btnRemove = container.querySelector<HTMLButtonElement>('#btn-mode-remove');
         btnRemove?.click();
@@ -1651,31 +2002,33 @@ export function renderAdminDashboardView(
     } else if (tab === 'event-register') {
       tabBtnEventRegister?.classList.add('active');
       if (viewEventRegisterTab) viewEventRegisterTab.style.display = 'block';
-      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Management / Register Event';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Dashboard / Register Event';
       initEventRegisterModule(preselectedEventId);
     } else if (tab === 'event-participants') {
       tabBtnEventParticipants?.classList.add('active');
       if (viewEventParticipantsTab) viewEventParticipantsTab.style.display = 'block';
-      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Management / Event Participants';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Dashboard / Event Participants';
       initEventParticipantsModule(preselectedEventId);
     } else if (tab === 'event-questions') {
       tabBtnEventQuestions?.classList.add('active');
       if (viewEventQuestionsTab) viewEventQuestionsTab.style.display = 'block';
-      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Management / Question Management';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Dashboard / Question Management';
       initQuestionManagementModule(preselectedEventId);
     } else if (tab === 'event-exam') {
       tabBtnEventExam?.classList.add('active');
       if (viewEventExamTab) viewEventExamTab.style.display = 'block';
-      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Management / Exam Management';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Dashboard / Exam Management';
       initExamManagementModule(preselectedEventId);
     } else if (tab === 'event-scoreboard') {
       tabBtnEventScoreboard?.classList.add('active');
       if (viewEventScoreboardTab) viewEventScoreboardTab.style.display = 'block';
-      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Management / Event Scoreboard';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'Event Dashboard / Event Scoreboard';
       initEventScoreboardModule(preselectedEventId);
     }
   }
 
+  tabBtnDailyDashboard?.addEventListener('click', () => switchTab('daily-dashboard'));
+  tabBtnEventDashboard?.addEventListener('click', () => switchTab('event-dashboard'));
   tabBtnUsers?.addEventListener('click', () => switchTab('users'));
   tabBtnAdmins?.addEventListener('click', () => switchTab('admins'));
   tabBtnEvents?.addEventListener('click', () => switchTab('events'));
@@ -1867,7 +2220,11 @@ export function renderAdminDashboardView(
       }
 
       updateBadgesAndMetrics();
-      if (activeTab === 'users') {
+      if (activeTab === 'daily-dashboard') {
+        initDailyDashboardModule();
+      } else if (activeTab === 'event-dashboard') {
+        initEventDashboardModule();
+      } else if (activeTab === 'users') {
         filterAndRenderUsers();
       } else if (activeTab === 'admins') {
         renderAdminsTable();
@@ -5555,6 +5912,380 @@ export function renderAdminDashboardView(
 
     if (sbSelectedEventId) {
       await setupScoreboard(sbSelectedEventId);
+    }
+  }
+
+  // =========================================================================
+  // MODULE 0: DAILY DASHBOARD (Independent daily operational data & practice)
+  // =========================================================================
+  let dailyDashboardData: DailyDashboardData | null = null;
+  let dailyTopicFilter = 'ALL';
+  let dailySearchQuery = '';
+
+  async function initDailyDashboardModule() {
+    const totalAttemptsVal = container.querySelector('#daily-metric-total-attempts');
+    const todayAttemptsVal = container.querySelector('#daily-metric-today-attempts');
+    const streaksVal = container.querySelector('#daily-metric-active-streaks');
+    const avgAccuracyVal = container.querySelector('#daily-metric-avg-accuracy');
+    const totalXpVal = container.querySelector('#daily-metric-total-xp');
+    const topicsContainer = container.querySelector('#daily-topics-container');
+    const attemptsTbody = container.querySelector('#daily-attempts-tbody');
+    const attemptsCountLabel = container.querySelector('#daily-attempts-count-label');
+    const filterTopicSelect = container.querySelector<HTMLSelectElement>('#daily-filter-topic');
+    const searchInput = container.querySelector<HTMLInputElement>('#daily-search-input');
+    const btnRefresh = container.querySelector<HTMLButtonElement>('#btn-daily-refresh');
+    const btnExportCsv = container.querySelector<HTMLButtonElement>('#btn-export-daily-csv');
+    const badgeDailyAttempts = container.querySelector('#badge-daily-attempts');
+
+    const renderDailyData = () => {
+      if (!dailyDashboardData) return;
+      const { metrics, topics, recentAttempts } = dailyDashboardData;
+
+      if (totalAttemptsVal) totalAttemptsVal.textContent = metrics.totalAttempts.toLocaleString();
+      if (todayAttemptsVal) todayAttemptsVal.textContent = metrics.todayAttempts.toLocaleString();
+      if (streaksVal) streaksVal.textContent = `${metrics.activeStreaksCount} Engineers`;
+      if (avgAccuracyVal) avgAccuracyVal.textContent = `${metrics.averageAccuracy}%`;
+      if (totalXpVal) totalXpVal.textContent = `${metrics.totalXpDistributed.toLocaleString()} XP`;
+      if (badgeDailyAttempts) badgeDailyAttempts.textContent = metrics.totalAttempts.toString();
+
+      // Render Topics
+      if (topicsContainer) {
+        if (topics.length === 0) {
+          topicsContainer.innerHTML = `
+            <div style="grid-column: 1 / -1; padding: 2rem; text-align: center; color: var(--text-muted); background: #f8fafc; border-radius: var(--radius-md);">
+              No practice track records logged yet today.
+            </div>
+          `;
+        } else {
+          topicsContainer.innerHTML = topics.map((t: DailyTopicStat) => `
+            <div style="background: #ffffff; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1.25rem; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <div style="font-weight: 800; font-size: 0.95rem; color: var(--text-main); margin-bottom: 0.4rem;">
+                  ${escapeHtml(t.topic)}
+                </div>
+                <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.82rem; color: var(--text-muted); margin-bottom: 0.5rem;">
+                  <span>${t.attempts} Submissions</span>
+                  <strong style="color: #16a34a;">${t.avgAccuracy}% Accuracy</strong>
+                </div>
+                <div style="width: 100%; height: 6px; background: #f1f5f9; border-radius: 999px; overflow: hidden; margin-bottom: 0.75rem;">
+                  <div style="width: ${Math.min(100, t.avgAccuracy)}%; height: 100%; background: linear-gradient(90deg, #6366f1, #10b981); border-radius: 999px;"></div>
+                </div>
+              </div>
+              <div style="display: flex; align-items: center; justify-content: space-between; border-top: 1px solid #f1f5f9; padding-top: 0.5rem;">
+                <span style="font-size: 0.75rem; color: var(--text-muted); font-weight: 600;">Earned XP</span>
+                <span style="font-size: 0.88rem; font-weight: 800; color: #4338ca;">+${t.totalXp.toLocaleString()} XP</span>
+              </div>
+            </div>
+          `).join('');
+        }
+      }
+
+      // Populate filter dropdown if empty
+      if (filterTopicSelect && filterTopicSelect.options.length <= 1) {
+        filterTopicSelect.innerHTML = `<option value="ALL">All Practice Domains (${topics.length})</option>` +
+          topics.map((t: DailyTopicStat) => `<option value="${escapeHtml(t.topic)}">${escapeHtml(t.topic)} (${t.attempts})</option>`).join('');
+      }
+
+      // Filter attempts
+      let filtered = [...recentAttempts];
+      if (dailyTopicFilter !== 'ALL') {
+        filtered = filtered.filter(a => a.quizTopic === dailyTopicFilter);
+      }
+      if (dailySearchQuery.trim()) {
+        const q = dailySearchQuery.toLowerCase();
+        filtered = filtered.filter(a =>
+          a.userName.toLowerCase().includes(q) ||
+          a.userEmail.toLowerCase().includes(q) ||
+          a.quizTopic.toLowerCase().includes(q)
+        );
+      }
+
+      if (attemptsCountLabel) {
+        attemptsCountLabel.textContent = `${filtered.length} submissions shown (${recentAttempts.length} total)`;
+      }
+
+      if (attemptsTbody) {
+        if (filtered.length === 0) {
+          attemptsTbody.innerHTML = `
+            <tr>
+              <td colspan="6" style="text-align: center; padding: 3rem 2rem; color: var(--text-muted);">
+                No matching daily quiz attempts found.
+              </td>
+            </tr>
+          `;
+        } else {
+          attemptsTbody.innerHTML = filtered.map((a: DailyAttemptRecord) => `
+            <tr>
+              <td>
+                <div style="display: flex; align-items: center; gap: 0.65rem;">
+                  ${renderAlphabetAvatar(a.userName, 'table-avatar-sm')}
+                  <div>
+                    <strong style="color: var(--text-main); font-size: 0.92rem; display: block;">${escapeHtml(a.userName)}</strong>
+                    <span style="color: var(--text-muted); font-size: 0.78rem;">${escapeHtml(a.userEmail)}</span>
+                  </div>
+                </div>
+              </td>
+              <td>
+                <span class="portal-stat-pill" style="font-size: 0.8rem; font-weight: 700; background: #eef2ff; color: #4338ca; border-color: #c7d2fe;">
+                  ${escapeHtml(a.quizTopic)}
+                </span>
+              </td>
+              <td style="text-align: right; font-weight: 700; color: var(--text-main); font-size: 0.92rem;">
+                ${a.score}/${a.totalQuestions}
+              </td>
+              <td style="text-align: right;">
+                <span style="font-weight: 800; color: ${a.accuracy >= 70 ? '#16a34a' : a.accuracy >= 40 ? '#d97706' : '#dc2626'}; font-size: 0.9rem;">
+                  ${a.accuracy}%
+                </span>
+              </td>
+              <td style="text-align: right; font-weight: 800; color: #4338ca; font-size: 0.92rem;">
+                +${a.xpEarned} XP
+              </td>
+              <td style="text-align: right; font-size: 0.82rem; color: var(--text-muted);">
+                ${formatDate(a.createdAt)}
+              </td>
+            </tr>
+          `).join('');
+        }
+      }
+    };
+
+    const loadDailyData = async () => {
+      try {
+        const res = await apiGetDailyDashboard();
+        if (res.success) {
+          dailyDashboardData = res;
+          renderDailyData();
+        }
+      } catch (err) {
+        console.error('Failed to load daily dashboard data:', err);
+      }
+    };
+
+    if (btnRefresh) {
+      btnRefresh.onclick = () => {
+        soundEngine.playClick();
+        loadDailyData();
+        showToast('Daily dashboard operational data refreshed.', 'info');
+      };
+    }
+
+    if (filterTopicSelect) {
+      filterTopicSelect.onchange = () => {
+        dailyTopicFilter = filterTopicSelect.value;
+        renderDailyData();
+      };
+    }
+
+    if (searchInput) {
+      searchInput.oninput = () => {
+        dailySearchQuery = searchInput.value;
+        renderDailyData();
+      };
+    }
+
+    if (btnExportCsv) {
+      btnExportCsv.onclick = () => {
+        soundEngine.playClick();
+        if (!dailyDashboardData || dailyDashboardData.recentAttempts.length === 0) {
+          showToast('No daily attempts data to export.', 'info');
+          return;
+        }
+        const headers = ['Attempt ID', 'Participant Name', 'Email', 'Practice Domain', 'Score', 'Total Questions', 'Accuracy %', 'XP Earned', 'Time (s)', 'Date'];
+        const rows = dailyDashboardData.recentAttempts.map((a: DailyAttemptRecord) => [
+          a.id,
+          `"${a.userName.replace(/"/g, '""')}"`,
+          a.userEmail,
+          `"${a.quizTopic.replace(/"/g, '""')}"`,
+          a.score,
+          a.totalQuestions,
+          a.accuracy,
+          a.xpEarned,
+          a.timeTakenSeconds,
+          a.createdAt
+        ]);
+        const csv = 'data:text/csv;charset=utf-8,' + [headers.join(','), ...rows.map(r => r.join(','))].join('\n');
+        const uri = encodeURI(csv);
+        const link = document.createElement('a');
+        link.setAttribute('href', uri);
+        link.setAttribute('download', `daily_quiz_submissions_${new Date().toISOString().slice(0, 10)}.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+        showToast('Daily quiz submissions CSV exported successfully!', 'success');
+      };
+    }
+
+    await loadDailyData();
+  }
+
+  // =========================================================================
+  // MODULE 0.5: EVENT DASHBOARD (Strictly limited to the selected event only)
+  // =========================================================================
+  let eventDashboardData: EventDashboardData | null = null;
+
+  async function initEventDashboardModule(preselectedEventId?: string) {
+    const eventSelect = container.querySelector<HTMLSelectElement>('#event-dash-select');
+    const statusPill = container.querySelector<HTMLElement>('#event-dash-status-pill');
+    const btnRefresh = container.querySelector<HTMLButtonElement>('#btn-event-dash-refresh');
+
+    const regMetric = container.querySelector('#edash-metric-registered');
+    const connMetric = container.querySelector('#edash-metric-connected');
+    const qMetric = container.querySelector('#edash-metric-questions');
+    const subMetric = container.querySelector('#edash-metric-submissions');
+
+    const infoTitle = container.querySelector('#edash-info-title');
+    const infoDomain = container.querySelector('#edash-info-domain');
+    const infoTimer = container.querySelector('#edash-info-timer');
+    const infoDesc = container.querySelector('#edash-info-desc');
+
+    const participantsTbody = container.querySelector('#edash-participants-tbody');
+    const previewCount = container.querySelector('#edash-preview-count');
+
+    if (!eventSelect) return;
+
+    if (preselectedEventId) {
+      edashSelectedEventId = preselectedEventId;
+    } else if (!edashSelectedEventId && allEvents.length > 0) {
+      edashSelectedEventId = allEvents[0].id;
+    }
+
+    // Populate event select
+    eventSelect.innerHTML = allEvents.map(e => `
+      <option value="${e.id}" ${e.id === edashSelectedEventId ? 'selected' : ''}>
+        ${escapeHtml(e.title)} (${e.domain || 'Engineering'}) — [${e.status}]
+      </option>
+    `).join('');
+
+    const loadEventData = async (eventId: string) => {
+      if (!eventId) return;
+      edashSelectedEventId = eventId;
+      // Sync across all other event modules so clicking submodules preserves the event
+      regSelectedEventId = eventId;
+      partSelectedEventId = eventId;
+      qmSelectedEventId = eventId;
+      examSelectedEventId = eventId;
+      sbSelectedEventId = eventId;
+
+      try {
+        const res = await apiGetEventDashboard(eventId);
+        if (res.success) {
+          eventDashboardData = res;
+          renderEventData();
+        }
+      } catch (err) {
+        console.error('Failed to load event dashboard data:', err);
+      }
+    };
+
+    const renderEventData = () => {
+      if (!eventDashboardData) return;
+      const { event, metrics, registrations, attendance } = eventDashboardData;
+
+      // Status pill
+      if (statusPill) {
+        const isLive = event.status === 'LIVE_NOW' || event.status === 'LOBBY' || event.status === 'QUESTION_ACTIVE';
+        const isCompleted = event.status === 'COMPLETED';
+        statusPill.className = `event-status-chip ${isLive ? 'live' : isCompleted ? 'ended' : 'upcoming'}`;
+        statusPill.innerHTML = isLive
+          ? `<span class="pulse-dot"></span> LIVE NOW`
+          : isCompleted
+            ? `COMPLETED`
+            : `UPCOMING`;
+      }
+
+      // Metrics
+      if (regMetric) regMetric.textContent = metrics.registeredCount.toString();
+      if (connMetric) connMetric.textContent = `${metrics.connectedAttendanceCount} Active`;
+      if (qMetric) qMetric.textContent = `${metrics.questionCount} Questions`;
+      if (subMetric) subMetric.textContent = `${metrics.totalAnswers} Answers`;
+
+      // Event Info Specs
+      if (infoTitle) infoTitle.textContent = event.title;
+      if (infoDomain) infoDomain.textContent = event.domain || 'General Engineering';
+      if (infoTimer) infoTimer.textContent = `${event.timerSeconds || 30} seconds`;
+      if (infoDesc) infoDesc.textContent = event.description || 'Live synchronized multiplayer competition.';
+
+      // Preview Table
+      if (previewCount) previewCount.textContent = `${registrations.length} Enrolled`;
+
+      const connectedUserIds = new Set(attendance.map(a => a.userId));
+
+      if (participantsTbody) {
+        if (registrations.length === 0) {
+          participantsTbody.innerHTML = `
+            <tr>
+              <td colspan="4" style="text-align: center; padding: 3rem 2rem; color: var(--text-muted);">
+                No participants registered for this event yet. Use <strong>Event Register</strong> to enroll participants.
+              </td>
+            </tr>
+          `;
+        } else {
+          participantsTbody.innerHTML = registrations.map(r => {
+            const isOnline = connectedUserIds.has(r.userId);
+            return `
+              <tr>
+                <td>
+                  <div style="display: flex; align-items: center; gap: 0.65rem;">
+                    ${renderAlphabetAvatar(r.userName, 'table-avatar-sm')}
+                    <div>
+                      <strong style="color: var(--text-main); font-size: 0.92rem; display: block;">${escapeHtml(r.userName)}</strong>
+                      <span style="color: var(--text-muted); font-size: 0.78rem;">${escapeHtml(r.userEmail)}</span>
+                    </div>
+                  </div>
+                </td>
+                <td style="font-size: 0.85rem; color: var(--text-muted);">
+                  ${formatDate(r.registeredAt)}
+                </td>
+                <td>
+                  <span class="portal-stat-pill" style="font-size: 0.78rem; font-weight: 700; ${isOnline ? 'background: #f0fdf4; color: #16a34a; border-color: #bbf7d0;' : 'background: #f8fafc; color: #64748b; border-color: #cbd5e1;'}">
+                    ${isOnline ? '<span class="pulse-dot"></span> In Live Room' : 'Offline / Awaiting'}
+                  </span>
+                </td>
+                <td style="text-align: right;">
+                  <span class="badge-enrolled" style="display: inline-flex; align-items: center; gap: 0.3rem; padding: 0.2rem 0.55rem; border-radius: 999px; font-size: 0.75rem; font-weight: 700; background: #ecfdf5; color: #047857; border: 1px solid #a7f3d0;">
+                    ${icon('Check', 12)} Enrolled
+                  </span>
+                </td>
+              </tr>
+            `;
+          }).join('');
+        }
+      }
+    };
+
+    eventSelect.onchange = () => {
+      soundEngine.playClick();
+      loadEventData(eventSelect.value);
+    };
+
+    if (btnRefresh) {
+      btnRefresh.onclick = () => {
+        soundEngine.playClick();
+        loadEventData(eventSelect.value);
+        showToast('Event dashboard data refreshed.', 'info');
+      };
+    }
+
+    // Submodule Quick Nav Buttons
+    container.querySelector('#edash-goto-register')?.addEventListener('click', () => {
+      switchTab('event-register', edashSelectedEventId);
+    });
+    container.querySelector('#edash-goto-participants')?.addEventListener('click', () => {
+      switchTab('event-participants', edashSelectedEventId);
+    });
+    container.querySelector('#edash-goto-questions')?.addEventListener('click', () => {
+      switchTab('event-questions', edashSelectedEventId);
+    });
+    container.querySelector('#edash-goto-exam')?.addEventListener('click', () => {
+      switchTab('event-exam', edashSelectedEventId);
+    });
+    container.querySelector('#edash-goto-scoreboard')?.addEventListener('click', () => {
+      switchTab('event-scoreboard', edashSelectedEventId);
+    });
+
+    if (edashSelectedEventId) {
+      await loadEventData(edashSelectedEventId);
     }
   }
 

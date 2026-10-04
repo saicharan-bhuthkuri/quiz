@@ -979,6 +979,25 @@ class RealtimeQuizEngine {
       return [];
     }
   }
+
+  // Get live room attendance for an event (excluding admin hosts)
+  public getRoomAttendance(eventId: string): { userId: string; userName: string; role?: string }[] {
+    const list: { userId: string; userName: string; role?: string }[] = [];
+    const seen = new Set<string>();
+    for (const client of this.clients.values()) {
+      if (client.currentEventId === eventId && client.userId && !isHostAdminClient(client)) {
+        if (!seen.has(client.userId)) {
+          seen.add(client.userId);
+          list.push({
+            userId: client.userId,
+            userName: client.userName || 'Anonymous Participant',
+            role: client.role || 'USER'
+          });
+        }
+      }
+    }
+    return list;
+  }
 }
 
 export const realtimeEngine = new RealtimeQuizEngine();

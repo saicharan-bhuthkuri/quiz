@@ -318,3 +318,93 @@ export async function apiGetDailyQuizHistory(userEmail: string): Promise<{ succe
   return res.json();
 }
 
+export interface DailyDashboardMetrics {
+  totalAttempts: number;
+  todayAttempts: number;
+  totalXpDistributed: number;
+  averageAccuracy: number;
+  activeStreaksCount: number;
+  totalUsers: number;
+}
+
+export interface DailyTopicStat {
+  topic: string;
+  attempts: number;
+  avgAccuracy: number;
+  totalXp: number;
+}
+
+export interface DailyAttemptRecord {
+  id: string;
+  userId: string;
+  userName: string;
+  userEmail: string;
+  quizTopic: string;
+  score: number;
+  totalQuestions: number;
+  xpEarned: number;
+  accuracy: number;
+  timeTakenSeconds: number;
+  createdAt: string;
+}
+
+export interface DailyStreakLeader {
+  id: string;
+  name: string;
+  email: string;
+  streak: number;
+  xp: number;
+  branch: string;
+  year: string;
+}
+
+export interface DailyDashboardData {
+  success: boolean;
+  metrics: DailyDashboardMetrics;
+  topics: DailyTopicStat[];
+  recentAttempts: DailyAttemptRecord[];
+  streakLeaders: DailyStreakLeader[];
+}
+
+export interface EventDashboardData {
+  success: boolean;
+  event: QuizEvent;
+  metrics: {
+    registeredCount: number;
+    connectedAttendanceCount: number;
+    questionCount: number;
+    totalAnswers: number;
+    activeParticipants: number;
+  };
+  registrations: Array<{
+    id: string;
+    userId: string;
+    userName: string;
+    userEmail: string;
+    registeredAt: string;
+  }>;
+  attendance: Array<{
+    userId: string;
+    userName: string;
+    role?: string;
+  }>;
+  questions: Array<{
+    id: string;
+    questionText: string;
+    points: number;
+    timerSeconds: number;
+    order: number;
+  }>;
+  leaderboard: LeaderboardEntry[];
+}
+
+export async function apiGetDailyDashboard(): Promise<DailyDashboardData> {
+  const res = await fetch(`${API_BASE}/admin/daily-dashboard`);
+  return res.json();
+}
+
+export async function apiGetEventDashboard(eventId: string): Promise<EventDashboardData> {
+  const res = await fetch(`${API_BASE}/admin/event-dashboard/${eventId}`);
+  return res.json();
+}
+

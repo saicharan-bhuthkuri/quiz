@@ -775,7 +775,7 @@ app.post('/api/events/:id/questions', async (req: Request, res: Response) => {
     });
 
     // Reload active event state
-    await realtimeEngine.getOrLoadEventState(id);
+    await realtimeEngine.reloadEventQuestions(id);
     realtimeEngine.broadcastEventListingUpdate('EVENT_UPDATED', { id });
 
     return res.status(201).json({
@@ -807,7 +807,7 @@ app.delete('/api/events/:id/questions/:qId', async (req: Request, res: Response)
       args: [qId, id]
     });
 
-    await realtimeEngine.getOrLoadEventState(id);
+    await realtimeEngine.reloadEventQuestions(id);
     return res.json({ success: true, message: 'Question deleted' });
   } catch (error: any) {
     console.error('Delete question error:', error);
@@ -846,7 +846,7 @@ app.put('/api/events/:id/questions/:qId', async (req: Request, res: Response) =>
       ]
     });
 
-    await realtimeEngine.getOrLoadEventState(id);
+    await realtimeEngine.reloadEventQuestions(id);
     return res.json({ success: true, message: 'Question updated successfully' });
   } catch (error: any) {
     console.error('Update question error:', error);
@@ -862,6 +862,10 @@ app.post('/api/events/:id/register', async (req: Request, res: Response) => {
 
     if (!userId || !userEmail) {
       return res.status(400).json({ error: 'User ID and email are required to register' });
+    }
+
+    if (userId.startsWith('adm_')) {
+      return res.status(400).json({ error: 'Admin host accounts cannot register as participants. Please use an engineer account.' });
     }
 
     const regId = 'reg_' + Math.random().toString(36).substring(2, 10);
@@ -913,7 +917,11 @@ app.get('/api/events/:id/participants', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const result = await db.execute({
-      sql: 'SELECT user_id, user_name, user_email, registered_at FROM event_registrations WHERE event_id = ? ORDER BY registered_at ASC;',
+      sql: `SELECT user_id, user_name, user_email, registered_at 
+            FROM event_registrations 
+            WHERE event_id = ? 
+              AND user_id NOT LIKE 'adm_%' 
+            ORDER BY registered_at ASC;`,
       args: [id]
     });
 

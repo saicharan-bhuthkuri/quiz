@@ -45,6 +45,15 @@ interface ClientConnection {
   currentEventId?: string;
 }
 
+export function isHostAdminClient(client: ClientConnection | { role?: string; userId?: string }): boolean {
+  if (!client) return false;
+  const role = String(client.role || '').toUpperCase();
+  if (role === 'ADMIN' || role === 'SUPERADMIN') return true;
+  const uid = String(client.userId || '');
+  if (uid.startsWith('adm_')) return true;
+  return false;
+}
+
 class RealtimeQuizEngine {
   private wss: WebSocketServer | null = null;
   private clients = new Map<WebSocket, ClientConnection>();
@@ -88,7 +97,11 @@ class RealtimeQuizEngine {
   // Load or get live state for an event
   public async getOrLoadEventState(eventId: string): Promise<LiveEventState | null> {
     if (this.activeEvents.has(eventId)) {
-      return this.activeEvents.get(eventId)!;
+      const existing = this.activeEvents.get(eventId)!;
+      if (existing.questions.length === 0) {
+        await this.reloadEventQuestions(eventId);
+      }
+      return existing;
     }
 
     try {
@@ -145,6 +158,7 @@ class RealtimeQuizEngine {
       for (const r of regRes.rows) {
         const uId = String(r.user_id);
         const uName = String(r.user_name);
+        if (isHostAdminClient({ userId: uId })) continue;
         registeredUsers.add(uId);
         scores.set(uId, {
           userId: uId,
@@ -164,6 +178,7 @@ class RealtimeQuizEngine {
 
       for (const a of ansRes.rows) {
         const uId = String(a.user_id);
+        if (isHostAdminClient({ userId: uId })) continue;
         const qId = String(a.question_id);
         const isCorrect = Number(a.is_correct) === 1;
         const pts = Number(a.points_earned || 0);
@@ -180,6 +195,7 @@ class RealtimeQuizEngine {
             answers: new Map()
           };
           scores.set(uId, userScore);
+          registeredUsers.add(uId);
         }
 
         userScore.answers.set(qId, {
@@ -237,18 +253,20 @@ class RealtimeQuizEngine {
       }
 
       case 'JOIN_EVENT_ROOM': {
-        const { eventId, userId, userName } = payload || {};
+        const { eventId, userId, userName, role } = payload || {};
         if (!eventId) return;
 
         client.currentEventId = eventId;
         if (userId) client.userId = userId;
         if (userName) client.userName = userName;
+        if (role) client.role = role;
 
         const state = await this.getOrLoadEventState(eventId);
         if (!state) return;
 
-        // If user is registered or admin, add to room
-        if (client.userId && !state.scores.has(client.userId)) {
+        // ONLY genuine registered participants (and NEVER hosts) are added to scores
+        const isHost = isHostAdminClient(client);
+        if (!isHost && client.userId && state.registeredUsers.has(client.userId) && !state.scores.has(client.userId)) {
           state.scores.set(client.userId, {
             userId: client.userId,
             userName: client.userName || 'Participant',
@@ -316,8 +334,17 @@ class RealtimeQuizEngine {
         const { eventId, questionId, selectedOption, timeTakenSeconds } = payload || {};
         if (!eventId || !questionId || selectedOption === undefined || !client.userId) return;
 
+        // Disallow host administrators from submitting participant answers
+        if (isHostAdminClient(client)) return;
+
         const state = await this.getOrLoadEventState(eventId);
         if (!state) return;
+
+        // Ensure user is actually registered for this event
+        if (!state.registeredUsers.has(client.userId)) {
+          console.warn(`[Realtime] Submission ignored: ${client.userId} is not registered for event ${eventId}`);
+          return;
+        }
 
         const currentQ = state.questions[state.currentQuestionIndex];
         if (!currentQ || currentQ.id !== questionId) return;
@@ -381,6 +408,12 @@ class RealtimeQuizEngine {
           }
         });
 
+        // Count how many participants have submitted answers for this question
+        let answersSubmittedCount = 0;
+        for (const s of state.scores.values()) {
+          if (s.answers.has(questionId)) answersSubmittedCount++;
+        }
+
         // Broadcast live score update & live leaderboard EXCLUSIVELY to Admin Dashboard
         this.broadcastToAdmins(eventId, {
           type: 'ADMIN_SCORE_UPDATED',
@@ -388,22 +421,16 @@ class RealtimeQuizEngine {
             eventId,
             userId: client.userId,
             userName: client.userName || 'Participant',
+            participantName: client.userName || 'Participant',
             questionId,
             selectedOption,
             isCorrect,
             pointsEarned,
+            pointsAwarded: pointsEarned,
+            answersSubmittedCount,
             score: userScore?.score || 0,
             correctCount: userScore?.correctCount || 0,
             leaderboard: this.getLeaderboard(state)
-          }
-        });
-
-        // Broadcast anonymized answer submission counter to room for Admin counter update
-        this.broadcastToRoom(eventId, {
-          type: 'ANSWER_SUBMITTED',
-          payload: {
-            eventId,
-            questionId
           }
         });
         break;
@@ -419,6 +446,14 @@ class RealtimeQuizEngine {
 
         const state = await this.getOrLoadEventState(eventId);
         if (!state) return;
+
+        // Ensure questions are ready
+        if (state.questions.length === 0) {
+          await this.reloadEventQuestions(eventId);
+          if (state.questions.length === 0) {
+            await this.seedDefaultQuestionsForEvent(eventId);
+          }
+        }
 
         state.status = 'EVENT_STARTED_WAITING_QUESTION';
         state.currentQuestionIndex = -1;
@@ -450,8 +485,21 @@ class RealtimeQuizEngine {
         const state = await this.getOrLoadEventState(eventId);
         if (!state) return;
 
-        const qIdx = questionIndex !== undefined ? questionIndex : state.currentQuestionIndex + 1;
-        if (qIdx < 0 || qIdx >= state.questions.length) return;
+        // Ensure questions are ready and loaded
+        if (state.questions.length === 0) {
+          await this.reloadEventQuestions(eventId);
+          if (state.questions.length === 0) {
+            await this.seedDefaultQuestionsForEvent(eventId);
+          }
+        }
+
+        let qIdx = questionIndex !== undefined ? questionIndex : state.currentQuestionIndex + 1;
+        if (qIdx < 0) qIdx = 0;
+        if (qIdx >= state.questions.length) {
+          console.warn(`[Realtime Engine] Question index ${qIdx} exceeds total questions (${state.questions.length}). Concluding event.`);
+          await this.handleClientMessage(client, { type: 'ADMIN_END_EVENT', payload: { eventId } });
+          return;
+        }
 
         // Clear existing interval
         if (state.timerInterval) {
@@ -464,6 +512,8 @@ class RealtimeQuizEngine {
         const currentQ = state.questions[qIdx];
         state.questionRemainingSeconds = currentQ.timerSeconds || 30;
         state.questionStartTime = Date.now();
+
+        console.log(`[Realtime Engine] Broadcasting Question ${qIdx + 1} (${currentQ.questionText.substring(0, 40)}...) to event room ${eventId}`);
 
         await db.execute({
           sql: 'UPDATE events SET status = ?, current_question_index = ? WHERE id = ?;',
@@ -684,15 +734,23 @@ class RealtimeQuizEngine {
     });
   }
 
-  // Calculate and return current leaderboard
+  // Calculate and return current leaderboard strictly for registered participants of this event
   public getLeaderboard(state: LiveEventState) {
-    const list = Array.from(state.scores.values()).map(s => ({
-      userId: s.userId,
-      userName: s.userName,
-      score: s.score,
-      correctCount: s.correctCount,
-      totalTimeSeconds: Math.round(s.totalTimeSeconds * 10) / 10
-    }));
+    const list = Array.from(state.scores.values())
+      .filter(s => {
+        // Exclude host administrators
+        if (isHostAdminClient({ userId: s.userId })) return false;
+        // Strictly only participants registered for THIS specific event
+        if (!state.registeredUsers.has(s.userId)) return false;
+        return true;
+      })
+      .map(s => ({
+        userId: s.userId,
+        userName: s.userName,
+        score: s.score,
+        correctCount: s.correctCount,
+        totalTimeSeconds: Math.round(s.totalTimeSeconds * 10) / 10
+      }));
 
     // Sort: highest score first, then highest correct answers, then lowest time
     list.sort((a, b) => {
@@ -825,6 +883,100 @@ class RealtimeQuizEngine {
       if (ws.readyState === WebSocket.OPEN) {
         ws.send(raw);
       }
+    }
+  }
+
+  // Reload questions for an event directly from DB
+  public async reloadEventQuestions(eventId: string): Promise<EventQuestionData[]> {
+    try {
+      const qRes = await db.execute({
+        sql: 'SELECT * FROM event_questions WHERE event_id = ? ORDER BY question_order ASC;',
+        args: [eventId]
+      });
+
+      const questions: EventQuestionData[] = qRes.rows.map(row => {
+        let opts: string[] = [];
+        try {
+          opts = JSON.parse(String(row.options_json || '[]'));
+        } catch {
+          opts = [];
+        }
+        return {
+          id: String(row.id),
+          eventId: String(row.event_id),
+          questionText: String(row.question_text),
+          options: opts,
+          correctOption: Number(row.correct_option || 0),
+          explanation: String(row.explanation || ''),
+          points: Number(row.points || 100),
+          timerSeconds: Number(row.timer_seconds || 30),
+          questionOrder: Number(row.question_order || 1)
+        };
+      });
+
+      const state = this.activeEvents.get(eventId);
+      if (state) {
+        state.questions = questions;
+      }
+      return questions;
+    } catch (err) {
+      console.error('[Realtime Engine] Failed to reload event questions:', err);
+      return [];
+    }
+  }
+
+  // Auto-seed default engineering questions if an event was created with 0 questions
+  public async seedDefaultQuestionsForEvent(eventId: string): Promise<EventQuestionData[]> {
+    try {
+      const defaults = [
+        {
+          id: `q_${eventId}_1`,
+          event_id: eventId,
+          question_text: 'What is the average-case time complexity of Kahn’s Algorithm for Topological Sorting?',
+          options: ['O(V + E)', 'O(V²)', 'O(V log V)', 'O(E log E)'],
+          correct_option: 0,
+          explanation: 'Kahn\'s algorithm processes each vertex and edge once using an in-degree queue, running in linear O(V + E) time.',
+          points: 100,
+          timer_seconds: 30,
+          question_order: 1
+        },
+        {
+          id: `q_${eventId}_2`,
+          event_id: eventId,
+          question_text: 'Which transport layer protocol provides connection-oriented, reliable and ordered byte-stream delivery?',
+          options: ['UDP', 'ICMP', 'TCP', 'IP'],
+          correct_option: 2,
+          explanation: 'TCP guarantees reliable and ordered data delivery through sequence numbers, acknowledgments, and flow control.',
+          points: 100,
+          timer_seconds: 30,
+          question_order: 2
+        },
+        {
+          id: `q_${eventId}_3`,
+          event_id: eventId,
+          question_text: 'Which data structure is fundamentally utilized to implement Breadth-First Search (BFS)?',
+          options: ['Stack', 'Queue', 'Priority Queue', 'Disjoint Set'],
+          correct_option: 1,
+          explanation: 'BFS explores graph vertices level-by-level using a FIFO Queue.',
+          points: 100,
+          timer_seconds: 30,
+          question_order: 3
+        }
+      ];
+
+      for (const q of defaults) {
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO event_questions (id, event_id, question_text, options_json, correct_option, explanation, points, timer_seconds, question_order, created_at)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'));`,
+          args: [q.id, q.event_id, q.question_text, JSON.stringify(q.options), q.correct_option, q.explanation, q.points, q.timer_seconds, q.question_order]
+        });
+      }
+
+      console.log(`[Realtime Engine] Automatically seeded 3 default questions for event ${eventId}`);
+      return await this.reloadEventQuestions(eventId);
+    } catch (err) {
+      console.error('[Realtime Engine] Auto-seed questions error:', err);
+      return [];
     }
   }
 }

@@ -42,6 +42,10 @@ export function renderAdminDashboardView(
     return;
   }
 
+  // Ensure WebSocket is connected and authenticated as ADMIN
+  wsClient.connect();
+  wsClient.refreshUser();
+
   const currentAdminEmail = sessionStorage.getItem('engiverse_admin_email') || 'saicharanbhuthkuri468@gmail.com';
   const rawAdminName = sessionStorage.getItem('engiverse_admin_name') || 'Sai Charan Bhuthkuri';
   const currentAdminName = rawAdminName.replace(/\s*\(Superadmin\)/i, '').trim();
@@ -789,6 +793,23 @@ export function renderAdminDashboardView(
               </div>
             </div>
 
+            <!-- Event Selector & Status Bar -->
+            <div class="admin-card" style="padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; border-radius: var(--radius-xl); background: #ffffff; border: 1.5px solid var(--border-card);">
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem; flex: 1; min-width: 280px; flex-wrap: wrap;">
+                  <span style="font-weight: 700; font-size: 0.9rem; color: var(--text-main); white-space: nowrap; display: flex; align-items: center; gap: 0.4rem;">
+                    ${icon('Users', 16)} Selected Event:
+                  </span>
+                  <select id="part-filter-event" class="admin-select-filter" style="flex: 1; max-width: 440px; min-width: 220px;">
+                    <option value="">-- Choose an Event to View Participants --</option>
+                  </select>
+                </div>
+                <div id="part-event-metrics" style="display: flex; align-items: center; gap: 0.75rem;">
+                  <!-- Populated dynamically with event domain and status pill -->
+                </div>
+              </div>
+            </div>
+
             <div class="admin-table-container">
               <div class="admin-toolbar">
                 <div class="admin-search-wrapper">
@@ -797,15 +818,11 @@ export function renderAdminDashboardView(
                     type="text"
                     id="part-search-input"
                     class="admin-search-field"
-                    placeholder="Search participants by name, email, or event title..."
+                    placeholder="Search enrolled participants by name or email..."
                   />
                 </div>
 
                 <div class="admin-filters-group">
-                  <select id="part-filter-event" class="admin-select-filter">
-                    <option value="ALL">All Competitive Events</option>
-                  </select>
-
                   <button id="btn-refresh-part-list" class="admin-toolbar-btn btn-refresh-records" title="Refresh participants from Turso DB">
                     <span class="toolbar-btn-icon">${icon('RotateCw', 14)}</span>
                     <span>Refresh</span>
@@ -3737,6 +3754,17 @@ export function renderAdminDashboardView(
     `).join('');
   }
 
+  const filterHostContestants = (list: any[]): any[] => {
+    return (list || []).filter(e => {
+      const uid = String(e.userId || '');
+      const uname = String(e.userName || '').toLowerCase();
+      if (uid.startsWith('adm_') || uid === 'usr_saicharan_super' || uname.includes('sai charan') || uname.includes('admin')) {
+        return false;
+      }
+      return true;
+    });
+  };
+
   function attachHostWebSocketListeners(eventId: string) {
     hostUnsubs = [
       wsClient.on('EVENT_STATE_SNAPSHOT', (snap: any) => {
@@ -3746,7 +3774,7 @@ export function renderAdminDashboardView(
         hostRemainingSeconds = snap.questionRemainingSeconds ?? 30;
         hostCurrentQuestion = snap.question;
         if (snap.leaderboard) {
-          hostLeaderboard = snap.leaderboard;
+          hostLeaderboard = filterHostContestants(snap.leaderboard);
         }
         renderHostConsoleBody();
       }),
@@ -3769,12 +3797,6 @@ export function renderAdminDashboardView(
         if (timerDisp) timerDisp.textContent = `${hostRemainingSeconds}s Remaining`;
       }),
 
-      wsClient.on('ANSWER_SUBMITTED', (data: any) => {
-        if (data.eventId === eventId) {
-          hostQuestionAnswerCount += 1;
-        }
-      }),
-
       wsClient.on('ADMIN_SCORE_UPDATED', (data: any) => {
         if (data.eventId === eventId) {
           if (data.answersSubmittedCount !== undefined) {
@@ -3783,7 +3805,7 @@ export function renderAdminDashboardView(
             hostQuestionAnswerCount += 1;
           }
           if (data.leaderboard) {
-            hostLeaderboard = data.leaderboard;
+            hostLeaderboard = filterHostContestants(data.leaderboard);
             const tbody = container.querySelector('#host-scoreboard-tbody');
             const count = container.querySelector('#host-lead-count');
             if (tbody) tbody.innerHTML = renderHostScoreboardRows();
@@ -3795,7 +3817,7 @@ export function renderAdminDashboardView(
 
       wsClient.on('ADMIN_QUESTION_REVIEW', (data: any) => {
         if (data.eventId === eventId && data.leaderboard) {
-          hostLeaderboard = data.leaderboard;
+          hostLeaderboard = filterHostContestants(data.leaderboard);
           const tbody = container.querySelector('#host-scoreboard-tbody');
           if (tbody) tbody.innerHTML = renderHostScoreboardRows();
         }
@@ -3803,7 +3825,7 @@ export function renderAdminDashboardView(
 
       wsClient.on('ADMIN_EVENT_CONCLUDED', (data: any) => {
         if (data.eventId === eventId && data.leaderboard) {
-          hostLeaderboard = data.leaderboard;
+          hostLeaderboard = filterHostContestants(data.leaderboard);
           const tbody = container.querySelector('#host-scoreboard-tbody');
           if (tbody) tbody.innerHTML = renderHostScoreboardRows();
         }
@@ -3813,14 +3835,14 @@ export function renderAdminDashboardView(
         if (data.eventId !== eventId) return;
         hostEventStatus = 'QUESTION_ENDED';
         if (data.leaderboard) {
-          hostLeaderboard = data.leaderboard;
+          hostLeaderboard = filterHostContestants(data.leaderboard);
         }
         renderHostConsoleBody();
       }),
 
       wsClient.on('LEADERBOARD_UPDATED', (data: any) => {
         if (data.eventId !== eventId) return;
-        hostLeaderboard = data.leaderboard || [];
+        hostLeaderboard = filterHostContestants(data.leaderboard || []);
         const tbody = container.querySelector('#host-scoreboard-tbody');
         const count = container.querySelector('#host-lead-count');
         if (tbody) tbody.innerHTML = renderHostScoreboardRows();
@@ -3831,7 +3853,7 @@ export function renderAdminDashboardView(
         if (data.eventId !== eventId) return;
         hostEventStatus = 'EVENT_ENDED';
         if (data.leaderboard) {
-          hostLeaderboard = data.leaderboard;
+          hostLeaderboard = filterHostContestants(data.leaderboard);
         }
         renderHostConsoleBody();
       }),
@@ -3878,16 +3900,23 @@ export function renderAdminDashboardView(
       `).join('')}
     `;
 
-    // Populate platform engineers quick-pick
+    const isUserAdmin = (u: { email?: string; id?: string; name?: string }) => {
+      const email = (u.email || '').toLowerCase().trim();
+      const uid = String(u.id || '');
+      return uid.startsWith('adm_') || uid === 'usr_saicharan_super' || email.includes('admin') || email === 'saicharanbhuthkuri468@gmail.com';
+    };
+
+    // Populate platform engineers quick-pick (excluding admins)
     if (quickRegPick) {
+      const eligibleUsers = allUsers.filter(u => !isUserAdmin(u));
       quickRegPick.innerHTML = `
         <option value="">-- Select Platform Engineer --</option>
-        ${allUsers.map(u => `
+        ${eligibleUsers.map(u => `
           <option value="${u.id}">${escapeHtml(u.name)} (${escapeHtml(u.email)})</option>
         `).join('')}
       `;
       quickRegPick.onchange = () => {
-        const u = allUsers.find(user => user.id === quickRegPick.value);
+        const u = eligibleUsers.find(user => user.id === quickRegPick.value);
         if (u) {
           if (quickRegName) quickRegName.value = u.name;
           if (quickRegEmail) quickRegEmail.value = u.email;
@@ -3897,6 +3926,10 @@ export function renderAdminDashboardView(
 
     const loadEventRegistrations = async (eventId: string) => {
       regSelectedEventId = eventId;
+      regRegisteredUserIds = new Set();
+      regRegisteredUserEmails = new Set();
+      renderPlatformEngineers(); // Reset UI immediately
+
       const ev = allEvents.find(e => e.id === eventId);
       const regBadge = container.querySelector<HTMLElement>('#reg-event-badge');
 
@@ -3935,27 +3968,32 @@ export function renderAdminDashboardView(
       // Fetch participants for this event
       try {
         const pRes = await apiGetEventParticipants(eventId);
-        if (pRes.success) {
-          regRegisteredUserIds = new Set(pRes.participants.map(p => p.userId));
-          regRegisteredUserEmails = new Set(pRes.participants.map(p => p.userEmail.toLowerCase().trim()));
-          renderPlatformEngineers();
+        if (pRes.success && pRes.participants) {
+          const filtered = pRes.participants.filter(p => !isUserAdmin({ id: p.userId, email: p.userEmail }));
+          regRegisteredUserIds = new Set(filtered.map(p => p.userId));
+          regRegisteredUserEmails = new Set(filtered.map(p => p.userEmail.toLowerCase().trim()));
+          ev.registrationCount = filtered.length;
+          const chip = container.querySelector('#reg-active-count-chip');
+          if (chip) chip.textContent = `${ev.registrationCount} Registered`;
         }
       } catch (err) {
         console.error('Failed to load event participants:', err);
       }
+      renderPlatformEngineers();
     };
 
     const renderPlatformEngineers = () => {
       if (!regTableTbody) return;
       const q = (regSearchInput?.value || '').toLowerCase().trim();
-      const filtered = allUsers.filter(u =>
+      const eligibleUsers = allUsers.filter(u => !isUserAdmin(u));
+      const filtered = eligibleUsers.filter(u =>
         u.name.toLowerCase().includes(q) ||
         u.email.toLowerCase().includes(q) ||
         (u.branch || '').toLowerCase().includes(q)
       );
 
       if (regFooterCount) {
-        regFooterCount.textContent = `Showing ${filtered.length} of ${allUsers.length} platform engineers (${regRegisteredUserIds.size} enrolled in this event)`;
+        regFooterCount.textContent = `Showing ${filtered.length} of ${eligibleUsers.length} platform engineers (${regRegisteredUserIds.size} enrolled in this event)`;
       }
 
       if (filtered.length === 0) {
@@ -4174,70 +4212,87 @@ export function renderAdminDashboardView(
     const btnRefreshPart = container.querySelector<HTMLButtonElement>('#btn-refresh-part-list');
     const btnExportPartCsv = container.querySelector<HTMLButtonElement>('#btn-export-participants-csv');
 
+    const partMetricsBar = container.querySelector<HTMLElement>('#part-event-metrics');
+
     if (!partFilterEvent) return;
 
     if (preselectedEventId) {
       partSelectedEventId = preselectedEventId;
+    } else if (!partSelectedEventId && allEvents.length > 0) {
+      partSelectedEventId = allEvents[0].id;
     }
 
     partFilterEvent.innerHTML = `
-      <option value="ALL">All Competitive Events</option>
+      <option value="">-- Choose an Event to View Participants --</option>
       ${allEvents.map(e => `
         <option value="${e.id}" ${e.id === partSelectedEventId ? 'selected' : ''}>
-          ${escapeHtml(e.title)} (${e.registrationCount || 0} Registered)
+          ${escapeHtml(e.title)} (${e.domain || 'Engineering'}) — [${e.status}]
         </option>
       `).join('')}
     `;
 
     const fetchParticipantsData = async () => {
+      loadedParticipantsList = [];
+      const ev = allEvents.find(e => e.id === partSelectedEventId);
+
+      if (!partSelectedEventId || !ev) {
+        if (partTotalBadge) partTotalBadge.textContent = '0 Participants';
+        if (partFooterCount) partFooterCount.textContent = 'Select an event above';
+        if (partMetricsBar) partMetricsBar.innerHTML = '';
+        if (partTbody) {
+          partTbody.innerHTML = `
+            <tr>
+              <td colspan="5" style="text-align: center; padding: 4rem 2rem; color: var(--text-muted);">
+                <span style="display: block; margin-bottom: 0.5rem;">${icon('Users', 36)}</span>
+                <h4 style="font-size: 1.05rem; color: var(--text-main); margin-bottom: 0.25rem;">No Event Selected</h4>
+                <p style="font-size: 0.85rem; margin: 0;">Please choose a competitive event above to view its registered participants.</p>
+              </td>
+            </tr>
+          `;
+        }
+        return;
+      }
+
+      if (partMetricsBar) {
+        const isLive = ev.status === 'LIVE_NOW' || ev.status === 'LOBBY' || ev.status === 'QUESTION_ACTIVE';
+        partMetricsBar.innerHTML = `
+          ${isLive ? `<span class="event-status-chip live"><span class="pulse-dot"></span> LIVE NOW</span>` : ev.status === 'COMPLETED' ? `<span class="event-status-chip ended">COMPLETED</span>` : `<span class="event-status-chip upcoming">UPCOMING</span>`}
+          <span class="event-domain-tag">${escapeHtml(ev.domain || 'Engineering')}</span>
+        `;
+      }
+
       if (partTbody) {
         partTbody.innerHTML = `
           <tr>
             <td colspan="5" style="text-align: center; padding: 3rem 2rem;">
               <div class="admin-loading-spinner"></div>
-              <span style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem; display: block;">Loading participants from Turso cloud database...</span>
+              <span style="color: var(--text-muted); font-size: 0.9rem; margin-top: 0.5rem; display: block;">Loading participants for ${escapeHtml(ev.title)}...</span>
             </td>
           </tr>
         `;
       }
 
-      loadedParticipantsList = [];
-
       try {
-        if (partSelectedEventId === 'ALL') {
-          const promises = allEvents.map(async ev => {
-            try {
-              const res = await apiGetEventParticipants(ev.id);
-              if (res.success && res.participants) {
-                return res.participants.map(p => ({
-                  userId: p.userId,
-                  userName: p.userName,
-                  userEmail: p.userEmail,
-                  registeredAt: p.registeredAt,
-                  eventId: ev.id,
-                  eventTitle: ev.title
-                }));
+        const res = await apiGetEventParticipants(partSelectedEventId);
+        if (res.success && res.participants) {
+          loadedParticipantsList = res.participants
+            .filter(p => {
+              const uid = String(p.userId || '');
+              const email = String(p.userEmail || '').toLowerCase();
+              if (uid.startsWith('adm_') || uid === 'usr_saicharan_super' || email.includes('admin') || email === 'saicharanbhuthkuri468@gmail.com') {
+                return false;
               }
-            } catch {
-              return [];
-            }
-            return [];
-          });
-          const nested = await Promise.all(promises);
-          loadedParticipantsList = nested.flat();
-        } else {
-          const ev = allEvents.find(e => e.id === partSelectedEventId);
-          const res = await apiGetEventParticipants(partSelectedEventId);
-          if (res.success && res.participants) {
-            loadedParticipantsList = res.participants.map(p => ({
+              return true;
+            })
+            .map(p => ({
               userId: p.userId,
               userName: p.userName,
               userEmail: p.userEmail,
               registeredAt: p.registeredAt,
               eventId: partSelectedEventId,
-              eventTitle: ev ? ev.title : 'Competitive Event'
+              eventTitle: ev.title
             }));
-          }
+          ev.registrationCount = loadedParticipantsList.length;
         }
       } catch (err) {
         console.error('Fetch participants error:', err);
@@ -4248,15 +4303,16 @@ export function renderAdminDashboardView(
 
     const renderParticipantsTable = () => {
       if (!partTbody) return;
+      const ev = allEvents.find(e => e.id === partSelectedEventId);
+      const evTitle = ev ? ev.title : 'Selected Event';
       const q = (partSearchInput?.value || '').toLowerCase().trim();
       const filtered = loadedParticipantsList.filter(p =>
         p.userName.toLowerCase().includes(q) ||
-        p.userEmail.toLowerCase().includes(q) ||
-        p.eventTitle.toLowerCase().includes(q)
+        p.userEmail.toLowerCase().includes(q)
       );
 
-      if (partTotalBadge) partTotalBadge.textContent = `${filtered.length} Participants`;
-      if (partFooterCount) partFooterCount.textContent = `Showing ${filtered.length} of ${loadedParticipantsList.length} enrolled engineers`;
+      if (partTotalBadge) partTotalBadge.textContent = `${loadedParticipantsList.length} Participants`;
+      if (partFooterCount) partFooterCount.textContent = `Showing ${filtered.length} of ${loadedParticipantsList.length} enrolled participants for ${escapeHtml(evTitle)}`;
 
       if (filtered.length === 0) {
         partTbody.innerHTML = `
@@ -4804,6 +4860,9 @@ export function renderAdminDashboardView(
       examSelectedEventId = eventId;
       examUnsubs.forEach(u => u());
       examUnsubs = [];
+      examActivityLogs = [];
+      examQuestions = [];
+      examAnswerCount = 0;
 
       const ev = allEvents.find(e => e.id === eventId);
       if (!eventId || !ev) {
@@ -4895,22 +4954,13 @@ export function renderAdminDashboardView(
           renderExamViewport();
         }),
 
-        wsClient.on('ANSWER_SUBMITTED', (data: any) => {
-          if (data.eventId === eventId) {
-            examAnswerCount += 1;
-            const cntElem = container.querySelector('#exam-answers-submitted-badge');
-            if (cntElem) cntElem.textContent = `${examAnswerCount} answers submitted`;
-            addExamLog(`Answer response received from participant.`, 'info');
-          }
-        }),
-
         wsClient.on('ADMIN_SCORE_UPDATED', (data: any) => {
           if (data.eventId === eventId) {
             examAnswerCount = data.answersSubmittedCount ?? (examAnswerCount + 1);
             const cntElem = container.querySelector('#exam-answers-submitted-badge');
-            if (cntElem) cntElem.textContent = `${examAnswerCount} answers submitted`;
-            const name = data.participantName || 'Participant';
-            const pts = data.pointsAwarded ? `(+${data.pointsAwarded} pts)` : '';
+            if (cntElem) cntElem.textContent = `${examAnswerCount} answers submitted this round`;
+            const name = data.participantName || data.userName || 'Participant';
+            const pts = data.pointsAwarded !== undefined ? `(+${data.pointsAwarded} pts)` : (data.pointsEarned ? `(+${data.pointsEarned} pts)` : '');
             addExamLog(`Participant ${name} submitted answer ${pts}`, data.isCorrect ? 'success' : 'warn');
           }
         }),
@@ -5204,10 +5254,22 @@ export function renderAdminDashboardView(
       `).join('')}
     `;
 
+    const filterContestants = (list: LeaderboardEntry[]): LeaderboardEntry[] => {
+      return (list || []).filter(e => {
+        const uid = String(e.userId || '');
+        const uname = String(e.userName || '').toLowerCase();
+        if (uid.startsWith('adm_') || uid === 'usr_saicharan_super' || uname.includes('sai charan') || uname.includes('admin')) {
+          return false;
+        }
+        return true;
+      });
+    };
+
     const setupScoreboard = async (eventId: string) => {
       sbSelectedEventId = eventId;
       sbUnsubs.forEach(u => u());
       sbUnsubs = [];
+      sbLeaderboard = []; // Clear immediately to prevent cross-event contamination
 
       const ev = allEvents.find(e => e.id === eventId);
       if (!eventId || !ev) {
@@ -5228,6 +5290,7 @@ export function renderAdminDashboardView(
       }
 
       if (sbBadge) sbBadge.textContent = `${ev.title} Scoreboard`;
+      renderScoreboard(); // Render immediately with cleared data
 
       // Connect to WS room for real-time live updates
       wsClient.connect();
@@ -5236,7 +5299,7 @@ export function renderAdminDashboardView(
       try {
         const leadRes = await apiGetEventLeaderboard(eventId);
         if (leadRes.success) {
-          sbLeaderboard = leadRes.leaderboard || [];
+          sbLeaderboard = filterContestants(leadRes.leaderboard || []);
         }
       } catch (err) {
         console.error('Failed to load leaderboard:', err);
@@ -5245,24 +5308,24 @@ export function renderAdminDashboardView(
       sbUnsubs = [
         wsClient.on('LEADERBOARD_UPDATED', (data: any) => {
           if (data.eventId !== eventId) return;
-          sbLeaderboard = data.leaderboard || [];
+          sbLeaderboard = filterContestants(data.leaderboard || []);
           renderScoreboard();
         }),
         wsClient.on('ADMIN_SCORE_UPDATED', (data: any) => {
           if (data.eventId === eventId && data.leaderboard) {
-            sbLeaderboard = data.leaderboard;
+            sbLeaderboard = filterContestants(data.leaderboard);
             renderScoreboard();
           }
         }),
         wsClient.on('ADMIN_QUESTION_REVIEW', (data: any) => {
           if (data.eventId === eventId && data.leaderboard) {
-            sbLeaderboard = data.leaderboard;
+            sbLeaderboard = filterContestants(data.leaderboard);
             renderScoreboard();
           }
         }),
         wsClient.on('ADMIN_EVENT_CONCLUDED', (data: any) => {
           if (data.eventId === eventId && data.leaderboard) {
-            sbLeaderboard = data.leaderboard;
+            sbLeaderboard = filterContestants(data.leaderboard);
             renderScoreboard();
           }
         }),
@@ -5271,13 +5334,13 @@ export function renderAdminDashboardView(
         }),
         wsClient.on('EVENT_ENDED', (data: any) => {
           if (data.eventId !== eventId) return;
-          if (data.leaderboard) sbLeaderboard = data.leaderboard;
+          if (data.leaderboard) sbLeaderboard = filterContestants(data.leaderboard);
           ev.status = 'COMPLETED';
           renderScoreboard();
         }),
         wsClient.on('EVENT_STATE_SNAPSHOT', (snap: any) => {
           if (snap.eventId !== eventId) return;
-          if (snap.leaderboard) sbLeaderboard = snap.leaderboard;
+          if (snap.leaderboard) sbLeaderboard = filterContestants(snap.leaderboard);
           renderScoreboard();
         })
       ];
@@ -5301,46 +5364,105 @@ export function renderAdminDashboardView(
             : `<span class="event-status-chip upcoming">UPCOMING</span>`;
       }
 
-      const p1 = sbLeaderboard[0];
-      const p2 = sbLeaderboard[1];
-      const p3 = sbLeaderboard[2];
+      const renderPodiumHtml = (): string => {
+        if (sbLeaderboard.length === 0) {
+          return '';
+        }
+
+        if (sbLeaderboard.length === 1) {
+          const p1 = sbLeaderboard[0];
+          return `
+            <!-- Single Champion Showcase (Only 1 Participant Ranked) -->
+            <div style="display: flex; justify-content: center; margin-bottom: 2rem;">
+              <div class="podium-card podium-gold" style="max-width: 440px; width: 100%; border: 2px solid #fde047; box-shadow: 0 10px 25px -5px rgba(234, 179, 8, 0.2);">
+                <span class="podium-rank-badge rank-1">${icon('Crown', 15)} 1st Place Champion</span>
+                <div style="margin: 0.85rem 0;">
+                  ${renderAlphabetAvatar(p1.userName, 'table-avatar-md')}
+                </div>
+                <strong class="podium-name" style="font-size: 1.15rem;">${escapeHtml(p1.userName)}</strong>
+                <span class="podium-score" style="font-size: 1.6rem; color: #4338ca;">${p1.score} XP</span>
+                <span class="podium-correct" style="color: #15803d; font-weight: 700;">${p1.correctCount} Correct (${p1.totalTimeSeconds ? p1.totalTimeSeconds.toFixed(1) + 's' : '0.0s'})</span>
+              </div>
+            </div>
+          `;
+        }
+
+        if (sbLeaderboard.length === 2) {
+          const p1 = sbLeaderboard[0];
+          const p2 = sbLeaderboard[1];
+          return `
+            <!-- Top 2 Duel Podium (Only 2 Participants Ranked) -->
+            <div class="sb-podium-grid" style="grid-template-columns: repeat(2, minmax(240px, 360px)); justify-content: center; max-width: 760px; margin: 0 auto 2rem; gap: 1.5rem;">
+              <!-- 1st Place Gold -->
+              <div class="podium-card podium-gold">
+                <span class="podium-rank-badge rank-1">${icon('Crown', 15)} 1st Place Champion</span>
+                <div style="margin: 0.75rem 0;">
+                  ${renderAlphabetAvatar(p1.userName, 'table-avatar-md')}
+                </div>
+                <strong class="podium-name">${escapeHtml(p1.userName)}</strong>
+                <span class="podium-score" style="font-size: 1.5rem;">${p1.score} XP</span>
+                <span class="podium-correct">${p1.correctCount} Correct</span>
+              </div>
+
+              <!-- 2nd Place Silver -->
+              <div class="podium-card podium-silver">
+                <span class="podium-rank-badge rank-2">${icon('Medal', 14)} 2nd Place</span>
+                <div style="margin: 0.75rem 0;">
+                  ${renderAlphabetAvatar(p2.userName, 'table-avatar-md')}
+                </div>
+                <strong class="podium-name">${escapeHtml(p2.userName)}</strong>
+                <span class="podium-score">${p2.score} XP</span>
+                <span class="podium-correct">${p2.correctCount} Correct</span>
+              </div>
+            </div>
+          `;
+        }
+
+        // 3 or more participants
+        const p1 = sbLeaderboard[0];
+        const p2 = sbLeaderboard[1];
+        const p3 = sbLeaderboard[2];
+        return `
+          <!-- Top 3 Podium Cards -->
+          <div class="sb-podium-grid" style="margin-bottom: 2rem;">
+            <!-- 2nd Place Silver -->
+            <div class="podium-card podium-silver">
+              <span class="podium-rank-badge rank-2">${icon('Medal', 14)} 2nd Place</span>
+              <div style="margin: 0.75rem 0;">
+                ${renderAlphabetAvatar(p2.userName, 'table-avatar-md')}
+              </div>
+              <strong class="podium-name">${escapeHtml(p2.userName)}</strong>
+              <span class="podium-score">${p2.score} XP</span>
+              <span class="podium-correct">${p2.correctCount} Correct</span>
+            </div>
+
+            <!-- 1st Place Gold (Champion) -->
+            <div class="podium-card podium-gold">
+              <span class="podium-rank-badge rank-1">${icon('Crown', 15)} 1st Place Champion</span>
+              <div style="margin: 0.75rem 0;">
+                ${renderAlphabetAvatar(p1.userName, 'table-avatar-md')}
+              </div>
+              <strong class="podium-name">${escapeHtml(p1.userName)}</strong>
+              <span class="podium-score" style="font-size: 1.5rem;">${p1.score} XP</span>
+              <span class="podium-correct">${p1.correctCount} Correct</span>
+            </div>
+
+            <!-- 3rd Place Bronze -->
+            <div class="podium-card podium-bronze">
+              <span class="podium-rank-badge rank-3">${icon('Award', 14)} 3rd Place</span>
+              <div style="margin: 0.75rem 0;">
+                ${renderAlphabetAvatar(p3.userName, 'table-avatar-md')}
+              </div>
+              <strong class="podium-name">${escapeHtml(p3.userName)}</strong>
+              <span class="podium-score">${p3.score} XP</span>
+              <span class="podium-correct">${p3.correctCount} Correct</span>
+            </div>
+          </div>
+        `;
+      };
 
       sbViewport.innerHTML = `
-        <!-- Top 3 Podium Cards -->
-        <div class="sb-podium-grid" style="margin-bottom: 2rem;">
-          <!-- 2nd Place Silver -->
-          <div class="podium-card podium-silver">
-            <span class="podium-rank-badge rank-2">${icon('Medal', 14)} 2nd Place</span>
-            <div style="margin: 0.75rem 0;">
-              ${renderAlphabetAvatar(p2 ? p2.userName : '—', 'table-avatar-md')}
-            </div>
-            <strong class="podium-name">${p2 ? escapeHtml(p2.userName) : 'Awaiting Runner-Up'}</strong>
-            <span class="podium-score">${p2 ? p2.score : 0} XP</span>
-            <span class="podium-correct">${p2 ? `${p2.correctCount} Correct` : '—'}</span>
-          </div>
-
-          <!-- 1st Place Gold (Champion) -->
-          <div class="podium-card podium-gold">
-            <span class="podium-rank-badge rank-1">${icon('Crown', 15)} 1st Place Champion</span>
-            <div style="margin: 0.75rem 0;">
-              ${renderAlphabetAvatar(p1 ? p1.userName : '—', 'table-avatar-md')}
-            </div>
-            <strong class="podium-name">${p1 ? escapeHtml(p1.userName) : 'Awaiting Winner'}</strong>
-            <span class="podium-score" style="font-size: 1.5rem;">${p1 ? p1.score : 0} XP</span>
-            <span class="podium-correct">${p1 ? `${p1.correctCount} Correct` : '—'}</span>
-          </div>
-
-          <!-- 3rd Place Bronze -->
-          <div class="podium-card podium-bronze">
-            <span class="podium-rank-badge rank-3">${icon('Award', 14)} 3rd Place</span>
-            <div style="margin: 0.75rem 0;">
-              ${renderAlphabetAvatar(p3 ? p3.userName : '—', 'table-avatar-md')}
-            </div>
-            <strong class="podium-name">${p3 ? escapeHtml(p3.userName) : 'Awaiting 3rd'}</strong>
-            <span class="podium-score">${p3 ? p3.score : 0} XP</span>
-            <span class="podium-correct">${p3 ? `${p3.correctCount} Correct` : '—'}</span>
-          </div>
-        </div>
+        ${renderPodiumHtml()}
 
         <!-- Full Ranked Standings Table -->
         <div class="admin-table-container">

@@ -212,14 +212,33 @@ class RealtimeWebSocketClient {
     }
   }
 
+  public refreshUser(): void {
+    this.initCurrentUser();
+    if (this.currentUser && this.isConnected()) {
+      this.send('IDENTIFY', {
+        userId: this.currentUser.id,
+        userName: this.currentUser.name,
+        role: this.currentUser.role || 'PARTICIPANT'
+      });
+    }
+  }
+
   // Room Management
   public joinEventRoom(eventId: string): void {
     this.currentEventId = eventId;
     this.initCurrentUser();
+    if (this.currentUser) {
+      this.send('IDENTIFY', {
+        userId: this.currentUser.id,
+        userName: this.currentUser.name,
+        role: this.currentUser.role || 'PARTICIPANT'
+      });
+    }
     this.send('JOIN_EVENT_ROOM', {
       eventId,
       userId: this.currentUser?.id,
-      userName: this.currentUser?.name
+      userName: this.currentUser?.name,
+      role: this.currentUser?.role || 'PARTICIPANT'
     });
   }
 

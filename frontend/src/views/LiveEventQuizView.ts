@@ -25,7 +25,7 @@ export function renderLiveEventQuizView(
     | 'LOBBY'
     | 'QUESTION_ACTIVE'
     | 'QUESTION_ENDED'
-    | 'EVENT_ENDED' = 'LOBBY';
+    | 'EVENT_ENDED' = 'UPCOMING';
   let currentQuestion: any = null;
   let currentQuestionIdx = -1;
   let totalQuestions = 5;
@@ -139,7 +139,7 @@ export function renderLiveEventQuizView(
             <span class="radar-icon">${icon('Clock', 32)}</span>
           </div>
 
-          <span class="lobby-badge-pill" style="background: rgba(148, 163, 184, 0.2); color: #cbd5e1; border-color: #64748b;">
+          <span class="lobby-badge-pill" style="background: #f1f5f9; color: #475569; border-color: #cbd5e1;">
             UPCOMING EVENT
           </span>
           <h1 class="lobby-title">Registered — Waiting for Host</h1>
@@ -161,7 +161,7 @@ export function renderLiveEventQuizView(
             <div class="status-divider"></div>
             <div class="status-item">
               <span class="item-label">${icon('Shield', 13)} Status</span>
-              <span class="item-val" style="color: #38bdf8; font-weight: 700;">Waiting for Host</span>
+              <span class="item-val" style="color: #0284c7; font-weight: 700;">Waiting for Host</span>
             </div>
           </div>
 
@@ -179,12 +179,12 @@ export function renderLiveEventQuizView(
     if (eventStatus === 'EVENT_STARTED_WAITING_QUESTION' || eventStatus === 'LOBBY') {
       return `
         <div class="live-lobby-card">
-          <div class="lobby-radar-ring" style="border-color: #22c55e; background: rgba(34, 197, 94, 0.15);">
-            <div class="radar-pulse" style="border-color: rgba(34, 197, 94, 0.6);"></div>
-            <span class="radar-icon" style="color: #4ade80;">${icon('Radio', 32)}</span>
+          <div class="lobby-radar-ring" style="border-color: #22c55e; background: #dcfce7;">
+            <div class="radar-pulse" style="border-color: rgba(34, 197, 94, 0.4);"></div>
+            <span class="radar-icon" style="color: #16a34a;">${icon('Radio', 32)}</span>
           </div>
 
-          <span class="lobby-badge-pill" style="background: rgba(34, 197, 94, 0.2); color: #86efac; border-color: rgba(34, 197, 94, 0.4);">
+          <span class="lobby-badge-pill" style="background: #f0fdf4; color: #15803d; border-color: #bbf7d0;">
             ● LIVE IN PROGRESS
           </span>
           <h1 class="lobby-title">Event Started — Waiting for Next Question</h1>
@@ -206,7 +206,7 @@ export function renderLiveEventQuizView(
             <div class="status-divider"></div>
             <div class="status-item">
               <span class="item-label">${icon('Clock', 13)} Current Step</span>
-              <span class="item-val" style="color: #fbbf24; font-weight: 700;">Waiting for Next Question</span>
+              <span class="item-val" style="color: #b45309; font-weight: 700;">Waiting for Next Question</span>
             </div>
           </div>
 
@@ -391,14 +391,17 @@ export function renderLiveEventQuizView(
 
       eventTitle = snap.title || eventTitle;
       eventStatus = snap.status;
+      if (eventStatus === 'LOBBY' || (eventStatus as string) === 'LIVE_NOW') {
+        eventStatus = snap.question ? 'QUESTION_ACTIVE' : 'EVENT_STARTED_WAITING_QUESTION';
+      }
       currentQuestionIdx = snap.currentQuestionIndex;
       totalQuestions = snap.totalQuestions || totalQuestions;
       remainingSeconds = snap.questionRemainingSeconds ?? remainingSeconds;
       totalQuestionSeconds = snap.question?.timerSeconds || 30;
       currentQuestion = snap.question;
-      hasAnsweredCurrent = snap.answeredCurrent;
-      if (snap.previousAnswer) {
-        selectedOptionIdx = snap.previousAnswer.selectedOption;
+      hasAnsweredCurrent = !!snap.answeredCurrent;
+      if (snap.selectedOption !== undefined && snap.selectedOption !== null) {
+        selectedOptionIdx = snap.selectedOption;
       }
 
       renderView();
@@ -448,12 +451,13 @@ export function renderLiveEventQuizView(
       }
     }),
 
-    // 5. Answer Submitted Acknowledgment from Server
+    // 5. Answer Submitted Acknowledgment from Server (Direct client ACK)
     wsClient.on('ANSWER_SUBMITTED', (data: any) => {
-      if (data.eventId !== eventId) return;
-      // Mark answered if not already set
-      if (!hasAnsweredCurrent) {
+      if (data.questionId === currentQuestion?.id || data.eventId === eventId) {
         hasAnsweredCurrent = true;
+        if (data.selectedOption !== undefined && data.selectedOption !== null) {
+          selectedOptionIdx = data.selectedOption;
+        }
         renderView();
       }
     }),

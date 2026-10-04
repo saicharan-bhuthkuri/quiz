@@ -151,27 +151,6 @@ export function renderAdminDashboardView(
           </button>
         </nav>
 
-        <!-- Sidebar System Keep-Alive Health Card -->
-        <div class="sidebar-system-card" id="sidebar-system-card" title="Click to view full Uptime Monitor">
-          <div class="sidebar-system-header">
-            <div class="sidebar-system-title">
-              <span class="system-pulse-dot"></span>
-              <span class="system-title-text">SYSTEM HEALTH</span>
-            </div>
-            <span class="system-status-pill">24/7 LIVE</span>
-          </div>
-          <div class="sidebar-system-body">
-            <div class="system-metric-line">
-              <span class="system-metric-label">Render API</span>
-              <span class="system-metric-badge green">Awake</span>
-            </div>
-            <div class="system-metric-line">
-              <span class="system-metric-label">Turso Cloud</span>
-              <span class="system-metric-badge green">Connected</span>
-            </div>
-          </div>
-        </div>
-
         <!-- Sidebar Footer: Current Superadmin Profile -->
         <div class="sidebar-footer-box">
           <div class="current-admin-card">
@@ -2228,12 +2207,6 @@ export function renderAdminDashboardView(
   // Topbar Uptime Badge Shortcut
   container.querySelector('.topbar-uptime-badge')?.addEventListener('click', (e) => {
     e.preventDefault();
-    switchTab('uptime-monitor');
-  });
-
-  // Sidebar System Health Card Shortcut
-  container.querySelector('#sidebar-system-card')?.addEventListener('click', () => {
-    soundEngine.playClick();
     switchTab('uptime-monitor');
   });
 

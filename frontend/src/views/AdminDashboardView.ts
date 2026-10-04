@@ -66,20 +66,22 @@ export function renderAdminDashboardView(
         <!-- Sidebar Brand Header -->
         <div class="sidebar-brand-box">
           <a href="#" class="sidebar-brand-link" id="sidebar-brand-home" title="Engiverse Homepage">
-            <img src="/logo.png" alt="Engiverse Logo" class="brand-logo-img" />
+            <div class="sidebar-brand-emblem">
+              <img src="/logo.png" alt="Engiverse Logo" class="brand-logo-img" />
+            </div>
             <div class="sidebar-brand-text">
               <span class="brand-name">Engiverse<span class="brand-dot">.</span></span>
               <span class="sidebar-portal-tag">ADMIN PORTAL</span>
             </div>
           </a>
-          <button id="btn-close-sidebar" class="btn-close-sidebar" aria-label="Close slide bar" title="Close Slide Bar">${icon('X', 16)}</button>
+          <button id="btn-close-sidebar" class="btn-close-sidebar" aria-label="Toggle Slide Bar" title="Collapse Slide Bar">${icon('ChevronLeft', 16)}</button>
         </div>
 
         <!-- Navigation Tabs Menu -->
         <nav class="sidebar-nav-menu">
           <!-- ================= 1. DAILY DASHBOARD (OPERATIONS & USERS) ================= -->
           <div class="sidebar-group-header">
-            <span class="sidebar-group-label">DAILY DASHBOARD</span>
+            <span class="sidebar-group-label">${icon('Activity', 12)} DAILY DASHBOARD</span>
             <span class="sidebar-group-chip daily-chip">Daily Ops</span>
           </div>
           
@@ -101,9 +103,18 @@ export function renderAdminDashboardView(
             <span class="nav-count-badge" id="badge-admins-count">0</span>
           </button>
 
+          <button class="sidebar-nav-btn" id="tab-btn-uptime-monitor" data-tab="uptime-monitor">
+            <span class="nav-btn-icon">${icon('Radio', 16)}</span>
+            <span class="nav-btn-text">Uptime Monitor</span>
+            <span class="nav-live-pill"><span class="nav-pulse-green"></span>24/7</span>
+          </button>
+
+          <!-- Sleek Section Divider -->
+          <div class="sidebar-section-divider"></div>
+
           <!-- ================= 2. EVENT DASHBOARD (COMPETITIONS & EXAMS) ================= -->
           <div class="sidebar-group-header">
-            <span class="sidebar-group-label">EVENT DASHBOARD</span>
+            <span class="sidebar-group-label">${icon('Trophy', 12)} EVENT DASHBOARD</span>
             <span class="sidebar-group-chip event-chip">Events Only</span>
           </div>
 
@@ -140,19 +151,46 @@ export function renderAdminDashboardView(
           </button>
         </nav>
 
+        <!-- Sidebar System Keep-Alive Health Card -->
+        <div class="sidebar-system-card" id="sidebar-system-card" title="Click to view full Uptime Monitor">
+          <div class="sidebar-system-header">
+            <div class="sidebar-system-title">
+              <span class="system-pulse-dot"></span>
+              <span class="system-title-text">SYSTEM HEALTH</span>
+            </div>
+            <span class="system-status-pill">24/7 LIVE</span>
+          </div>
+          <div class="sidebar-system-body">
+            <div class="system-metric-line">
+              <span class="system-metric-label">Render API</span>
+              <span class="system-metric-badge green">Awake</span>
+            </div>
+            <div class="system-metric-line">
+              <span class="system-metric-label">Turso Cloud</span>
+              <span class="system-metric-badge green">Connected</span>
+            </div>
+          </div>
+        </div>
+
         <!-- Sidebar Footer: Current Superadmin Profile -->
         <div class="sidebar-footer-box">
           <div class="current-admin-card">
-            <div class="admin-avatar-shield">${icon('Shield', 14)}</div>
+            <div class="sidebar-avatar-wrapper">
+              ${renderAlphabetAvatar(currentAdminName, 'sidebar-admin-avatar')}
+              <span class="sidebar-avatar-badge" title="Superadmin Verified">${icon('ShieldCheck', 10)}</span>
+            </div>
             <div class="current-admin-meta">
-              <span class="current-admin-name">${escapeHtml(currentAdminName)}</span>
-              <span class="current-admin-role">SUPERADMIN</span>
+              <div class="current-admin-header-row">
+                <span class="current-admin-name" title="${escapeHtml(currentAdminName)}">${escapeHtml(currentAdminName)}</span>
+                <span class="current-admin-role-chip">SUPERADMIN</span>
+              </div>
               <span class="current-admin-email" title="${escapeHtml(currentAdminEmail)}">${escapeHtml(currentAdminEmail)}</span>
             </div>
           </div>
 
-          <button id="btn-sidebar-logout" class="btn-sidebar-exit">
-            <span>${icon('LogOut', 14)} Exit Admin Console</span>
+          <button id="btn-sidebar-logout" class="btn-sidebar-exit" title="Sign out of Admin Console">
+            <span class="btn-exit-icon">${icon('LogOut', 14)}</span>
+            <span class="btn-exit-text">Exit Admin Console</span>
           </button>
         </div>
       </aside>
@@ -264,78 +302,6 @@ export function renderAdminDashboardView(
                   <span class="stat-val" id="daily-metric-total-xp">— XP</span>
                   <span class="stat-title">Practice XP Distributed</span>
                   <span class="stat-sub">Earned via daily challenges</span>
-                </div>
-              </div>
-            </div>
-
-            <!-- UptimeRobot 24/7 Service Health & Monitor Hub -->
-            <div class="uptimerobot-hub-card" style="margin: 1.5rem 0; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #bae6fd; border-radius: var(--radius-xl); padding: 1.25rem 1.5rem; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.08);">
-              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
-                <div style="display: flex; align-items: center; gap: 0.75rem;">
-                  <div style="width: 40px; height: 40px; border-radius: 12px; background: #0284c7; display: flex; align-items: center; justify-content: center; color: #ffffff; box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3);">
-                    ${icon('Activity', 22)}
-                  </div>
-                  <div>
-                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
-                      <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0369a1;">UptimeRobot 24/7 Monitor &amp; Keep-Alive</h3>
-                      <span class="count-pill-modern" style="background: #e0f2fe; color: #0284c7; border-color: #7dd3fc; font-size: 0.7rem; font-weight: 700;">Zero Cold Starts</span>
-                    </div>
-                    <p style="margin: 0.2rem 0 0; font-size: 0.8rem; color: #075985;">Continuous 5-minute health pings keep the Render Node.js backend awake 24/7 and eliminate free-tier instance sleeping.</p>
-                  </div>
-                </div>
-
-                <div style="display: flex; align-items: center; gap: 0.6rem;">
-                  <button id="btn-test-health-ping" class="btn btn-sm btn-secondary" style="border-color: #7dd3fc; color: #0284c7; background: #ffffff;" title="Test live ping now">
-                    <span>${icon('Zap', 14)} Test Live Ping</span>
-                  </button>
-                  <a href="https://uptimerobot.com/dashboard" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary" style="background: #0284c7; border-color: #0284c7; color: #ffffff;" title="Open UptimeRobot Dashboard">
-                    <span>${icon('ExternalLink', 14)} UptimeRobot Dashboard</span>
-                  </a>
-                </div>
-              </div>
-
-              <!-- Monitor Endpoints Grid -->
-              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.75rem;">
-                <!-- Backend API Monitor -->
-                <div style="background: #ffffff; border: 1px solid #bae6fd; border-radius: var(--radius-lg); padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem;">
-                  <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 0.78rem; font-weight: 700; color: #0369a1; display: flex; align-items: center; gap: 0.4rem;">
-                      <span class="live-pulse-dot" style="background: #10b981;"></span>
-                      Backend API (Render)
-                    </span>
-                    <span id="uptime-backend-status-badge" style="font-size: 0.68rem; font-weight: 700; color: #047857; background: #d1fae5; padding: 0.15rem 0.5rem; border-radius: 999px;">HTTP 200 OK</span>
-                  </div>
-                  <div style="display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.35rem 0.6rem;">
-                    <code style="font-size: 0.73rem; color: #0f172a; flex: 1; word-break: break-all;">https://engiverse-backend.onrender.com/api/health</code>
-                    <button class="btn-copy-monitor-url" data-url="https://engiverse-backend.onrender.com/api/health" style="background: transparent; border: none; cursor: pointer; color: #0284c7;" title="Copy Backend Health URL">
-                      ${icon('Copy', 14)}
-                    </button>
-                  </div>
-                  <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.7rem; color: #64748b;">
-                    <span>Interval: <strong>5 mins</strong> (prevents sleeping)</span>
-                    <span id="uptime-backend-latency">⚡ Latency: <strong id="ping-latency-val">—</strong></span>
-                  </div>
-                </div>
-
-                <!-- Frontend SPA Monitor -->
-                <div style="background: #ffffff; border: 1px solid #bae6fd; border-radius: var(--radius-lg); padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem;">
-                  <div style="display: flex; align-items: center; justify-content: space-between;">
-                    <span style="font-size: 0.78rem; font-weight: 700; color: #0369a1; display: flex; align-items: center; gap: 0.4rem;">
-                      <span class="live-pulse-dot" style="background: #10b981;"></span>
-                      Frontend Web App (Firebase)
-                    </span>
-                    <span style="font-size: 0.68rem; font-weight: 700; color: #047857; background: #d1fae5; padding: 0.15rem 0.5rem; border-radius: 999px;">Global Edge CDN</span>
-                  </div>
-                  <div style="display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.35rem 0.6rem;">
-                    <code style="font-size: 0.73rem; color: #0f172a; flex: 1; word-break: break-all;">https://engiverse-quiz.web.app</code>
-                    <button class="btn-copy-monitor-url" data-url="https://engiverse-quiz.web.app" style="background: transparent; border: none; cursor: pointer; color: #0284c7;" title="Copy Frontend URL">
-                      ${icon('Copy', 14)}
-                    </button>
-                  </div>
-                  <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.7rem; color: #64748b;">
-                    <span>Interval: <strong>5 mins</strong> (SSL &amp; CDN check)</span>
-                    <span>Status: <strong style="color: #059669;">Operational</strong></span>
-                  </div>
                 </div>
               </div>
             </div>
@@ -618,6 +584,133 @@ export function renderAdminDashboardView(
               <div class="admin-table-footer">
                 <span id="admin-count-label" class="admin-table-count-text">Authorized admin staff</span>
                 <span class="admin-quick-legend">${icon('Lock', 14)} Primary Superadministrator (<code>${escapeHtml(currentAdminEmail)}</code>) is protected.</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================= TAB: UPTIME MONITOR (24/7 MONITOR & KEEP-ALIVE) ================= -->
+          <section id="view-uptime-monitor-tab" class="admin-tab-section" style="display: none;">
+            <!-- Header Row -->
+            <div class="admin-section-header">
+              <div class="header-split-row">
+                <div>
+                  <div class="title-with-pill">
+                    <h1 class="admin-view-heading">UptimeRobot 24/7 Monitor &amp; Keep-Alive</h1>
+                    <span class="count-pill-modern" style="background: #e0f2fe; color: #0284c7; border-color: #7dd3fc; font-weight: 700;">Zero Cold Starts</span>
+                  </div>
+                  <p class="admin-view-desc">Continuous 5-minute health pings keep the Render Node.js backend awake 24/7 and eliminate free-tier instance sleeping.</p>
+                </div>
+                <div class="admin-top-actions">
+                  <button id="btn-test-health-ping" class="btn btn-secondary btn-pill" style="border-color: #7dd3fc; color: #0284c7;" title="Test live ping now">
+                    <span>${icon('Zap', 14)} Test Live Ping</span>
+                  </button>
+                  <a href="https://uptimerobot.com/dashboard" target="_blank" rel="noopener noreferrer" class="btn btn-primary btn-pill" style="background: #0284c7; border-color: #0284c7; color: #ffffff;" title="Open UptimeRobot Dashboard">
+                    <span>${icon('ExternalLink', 14)} UptimeRobot Dashboard</span>
+                  </a>
+                </div>
+              </div>
+            </div>
+
+            <!-- Monitor Cards & Real-Time Stats -->
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap: 1.5rem; margin-top: 1.5rem;">
+              <!-- Backend API (Render) Card -->
+              <div class="admin-stat-card" style="padding: 1.75rem; border-radius: var(--radius-xl); border: 1.5px solid #bae6fd; background: #ffffff; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.06); display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #0284c7; display: flex; align-items: center; justify-content: center; color: #ffffff;">
+                      ${icon('Server', 22)}
+                    </div>
+                    <div>
+                      <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0369a1;">Backend API (Render)</h3>
+                      <span style="font-size: 0.76rem; color: #64748b;">Node.js Express + LibSQL + WebSockets</span>
+                    </div>
+                  </div>
+                  <span id="uptime-backend-status-badge" style="font-size: 0.75rem; font-weight: 800; color: #047857; background: #d1fae5; padding: 0.25rem 0.75rem; border-radius: 999px; border: 1px solid #a7f3d0;">HTTP 200 OK</span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                  <label style="font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;">Monitored Endpoint (Keep-Alive)</label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.6rem 0.85rem;">
+                    <code style="font-size: 0.8rem; color: #0f172a; flex: 1; word-break: break-all; font-family: monospace;">https://engiverse-backend.onrender.com/api/health</code>
+                    <button class="btn-copy-monitor-url" data-url="https://engiverse-backend.onrender.com/api/health" style="background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 6px; padding: 0.3rem 0.6rem; cursor: pointer; color: #0284c7; display: flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; font-weight: 700;" title="Copy Backend Health URL">
+                      ${icon('Copy', 13)} Copy
+                    </button>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #f1f5f9;">
+                  <div style="background: #f8fafc; padding: 0.65rem 0.85rem; border-radius: 8px;">
+                    <span style="font-size: 0.7rem; color: #64748b; display: block;">Ping Interval</span>
+                    <strong style="font-size: 0.88rem; color: #0f172a;">5 minutes</strong>
+                    <span style="font-size: 0.68rem; color: #059669; display: block; margin-top: 0.1rem;">Prevents instance sleeping</span>
+                  </div>
+                  <div style="background: #f8fafc; padding: 0.65rem 0.85rem; border-radius: 8px;">
+                    <span style="font-size: 0.7rem; color: #64748b; display: block;">Round-Trip Latency</span>
+                    <strong style="font-size: 0.88rem; color: #0284c7;" id="ping-latency-val">—</strong>
+                    <span style="font-size: 0.68rem; color: #64748b; display: block; margin-top: 0.1rem;">Measured in real-time</span>
+                  </div>
+                </div>
+              </div>
+
+              <!-- Frontend Web App (Firebase) Card -->
+              <div class="admin-stat-card" style="padding: 1.75rem; border-radius: var(--radius-xl); border: 1.5px solid #bae6fd; background: #ffffff; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.06); display: flex; flex-direction: column; gap: 1rem;">
+                <div style="display: flex; align-items: center; justify-content: space-between;">
+                  <div style="display: flex; align-items: center; gap: 0.75rem;">
+                    <div style="width: 44px; height: 44px; border-radius: 12px; background: #f59e0b; display: flex; align-items: center; justify-content: center; color: #ffffff;">
+                      ${icon('Globe', 22)}
+                    </div>
+                    <div>
+                      <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #92400e;">Frontend Web App (Firebase)</h3>
+                      <span style="font-size: 0.76rem; color: #64748b;">Global Edge CDN &amp; SSL</span>
+                    </div>
+                  </div>
+                  <span style="font-size: 0.75rem; font-weight: 800; color: #047857; background: #d1fae5; padding: 0.25rem 0.75rem; border-radius: 999px; border: 1px solid #a7f3d0;">Operational</span>
+                </div>
+
+                <div style="display: flex; flex-direction: column; gap: 0.35rem;">
+                  <label style="font-size: 0.75rem; font-weight: 700; color: #475569; text-transform: uppercase; letter-spacing: 0.04em;">Monitored URL</label>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 8px; padding: 0.6rem 0.85rem;">
+                    <code style="font-size: 0.8rem; color: #0f172a; flex: 1; word-break: break-all; font-family: monospace;">https://engiverse-quiz.web.app</code>
+                    <button class="btn-copy-monitor-url" data-url="https://engiverse-quiz.web.app" style="background: #e0f2fe; border: 1px solid #bae6fd; border-radius: 6px; padding: 0.3rem 0.6rem; cursor: pointer; color: #0284c7; display: flex; align-items: center; gap: 0.3rem; font-size: 0.75rem; font-weight: 700;" title="Copy Frontend URL">
+                      ${icon('Copy', 13)} Copy
+                    </button>
+                  </div>
+                </div>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; padding-top: 0.5rem; border-top: 1px solid #f1f5f9;">
+                  <div style="background: #f8fafc; padding: 0.65rem 0.85rem; border-radius: 8px;">
+                    <span style="font-size: 0.7rem; color: #64748b; display: block;">Ping Interval</span>
+                    <strong style="font-size: 0.88rem; color: #0f172a;">5 minutes</strong>
+                    <span style="font-size: 0.68rem; color: #059669; display: block; margin-top: 0.1rem;">Continuous SSL verification</span>
+                  </div>
+                  <div style="background: #f8fafc; padding: 0.65rem 0.85rem; border-radius: 8px;">
+                    <span style="font-size: 0.7rem; color: #64748b; display: block;">Service Availability</span>
+                    <strong style="font-size: 0.88rem; color: #16a34a;">100% Uptime</strong>
+                    <span style="font-size: 0.68rem; color: #64748b; display: block; margin-top: 0.1rem;">Firebase Global Anycast</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <!-- Setup Instructions Guide -->
+            <div style="margin-top: 2rem; background: #ffffff; border: 1px solid var(--border-card); border-radius: var(--radius-xl); padding: 1.75rem;">
+              <h3 style="font-size: 1.05rem; font-weight: 800; color: var(--text-main); margin: 0 0 1rem; display: flex; align-items: center; gap: 0.5rem;">
+                <span style="color: #0284c7;">${icon('ShieldCheck', 20)}</span>
+                How to Configure UptimeRobot (1-Minute Quick Setup)
+              </h3>
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 1rem;">
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-lg); padding: 1.25rem;">
+                  <div style="font-weight: 800; font-size: 0.92rem; color: #0369a1; margin-bottom: 0.5rem;">Step 1: Create Free Account</div>
+                  <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin: 0;">Sign up for a free plan at <a href="https://uptimerobot.com" target="_blank" rel="noopener noreferrer" style="color: #0284c7; font-weight: 700;">uptimerobot.com</a>. Free accounts include 50 monitors with 5-minute check intervals.</p>
+                </div>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-lg); padding: 1.25rem;">
+                  <div style="font-weight: 800; font-size: 0.92rem; color: #0369a1; margin-bottom: 0.5rem;">Step 2: Add Backend Monitor</div>
+                  <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin: 0;">Click <strong>+ Add New Monitor</strong>. Select <strong>HTTP(s)</strong>, set URL to <code>https://engiverse-backend.onrender.com/api/health</code>, and set interval to <strong>5 minutes</strong>.</p>
+                </div>
+                <div style="background: #f8fafc; border: 1px solid #e2e8f0; border-radius: var(--radius-lg); padding: 1.25rem;">
+                  <div style="font-weight: 800; font-size: 0.92rem; color: #0369a1; margin-bottom: 0.5rem;">Step 3: Keep-Alive Active</div>
+                  <p style="font-size: 0.82rem; color: var(--text-muted); line-height: 1.5; margin: 0;">Render receives a lightweight HTTP HEAD/GET request every 5 minutes, preventing the container from sleeping so your students never experience cold starts!</p>
+                </div>
               </div>
             </div>
           </section>
@@ -1864,6 +1957,7 @@ export function renderAdminDashboardView(
     | 'event-dashboard'
     | 'users'
     | 'admins'
+    | 'uptime-monitor'
     | 'events'
     | 'add-event'
     | 'remove-event'
@@ -1911,6 +2005,7 @@ export function renderAdminDashboardView(
   const tabBtnEventDashboard = container.querySelector<HTMLButtonElement>('#tab-btn-event-dashboard');
   const tabBtnUsers = container.querySelector<HTMLButtonElement>('#tab-btn-users');
   const tabBtnAdmins = container.querySelector<HTMLButtonElement>('#tab-btn-admins');
+  const tabBtnUptimeMonitor = container.querySelector<HTMLButtonElement>('#tab-btn-uptime-monitor');
   const tabBtnEvents = container.querySelector<HTMLButtonElement>('#tab-btn-events');
   const tabBtnAddEvent = container.querySelector<HTMLButtonElement>('#tab-btn-add-event');
   const tabBtnRemoveEvent = container.querySelector<HTMLButtonElement>('#tab-btn-remove-event');
@@ -1925,6 +2020,7 @@ export function renderAdminDashboardView(
   const viewEventDashboardTab = container.querySelector<HTMLElement>('#view-event-dashboard-tab');
   const viewUsersTab = container.querySelector<HTMLElement>('#view-users-tab');
   const viewAdminsTab = container.querySelector<HTMLElement>('#view-admins-tab');
+  const viewUptimeMonitorTab = container.querySelector<HTMLElement>('#view-uptime-monitor-tab');
   const viewEventsTab = container.querySelector<HTMLElement>('#view-events-tab');
   const viewAddEventTab = container.querySelector<HTMLElement>('#view-add-event-tab');
   const viewRemoveEventTab = container.querySelector<HTMLElement>('#view-remove-event-tab');
@@ -2014,6 +2110,7 @@ export function renderAdminDashboardView(
       tabBtnEventDashboard,
       tabBtnUsers,
       tabBtnAdmins,
+      tabBtnUptimeMonitor,
       tabBtnEvents,
       tabBtnAddEvent,
       tabBtnRemoveEvent,
@@ -2030,6 +2127,7 @@ export function renderAdminDashboardView(
       viewEventDashboardTab,
       viewUsersTab,
       viewAdminsTab,
+      viewUptimeMonitorTab,
       viewEventsTab,
       viewAddEventTab,
       viewRemoveEventTab,
@@ -2062,6 +2160,11 @@ export function renderAdminDashboardView(
       if (viewAdminsTab) viewAdminsTab.style.display = 'block';
       if (topbarPageLabel) topbarPageLabel.textContent = 'Daily Dashboard / List of Admins';
       renderAdminsTable();
+    } else if (tab === 'uptime-monitor') {
+      tabBtnUptimeMonitor?.classList.add('active');
+      if (viewUptimeMonitorTab) viewUptimeMonitorTab.style.display = 'block';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'System Monitor / Uptime & Keep-Alive';
+      initUptimeMonitorModule();
     } else if (tab === 'events') {
       tabBtnEvents?.classList.add('active');
       if (viewEventsTab) viewEventsTab.style.display = 'block';
@@ -2112,6 +2215,7 @@ export function renderAdminDashboardView(
   tabBtnEventDashboard?.addEventListener('click', () => switchTab('event-dashboard'));
   tabBtnUsers?.addEventListener('click', () => switchTab('users'));
   tabBtnAdmins?.addEventListener('click', () => switchTab('admins'));
+  tabBtnUptimeMonitor?.addEventListener('click', () => switchTab('uptime-monitor'));
   tabBtnEvents?.addEventListener('click', () => switchTab('events'));
   tabBtnAddEvent?.addEventListener('click', () => switchTab('add-event'));
   tabBtnRemoveEvent?.addEventListener('click', () => switchTab('remove-event'));
@@ -2120,6 +2224,18 @@ export function renderAdminDashboardView(
   tabBtnEventQuestions?.addEventListener('click', () => switchTab('event-questions'));
   tabBtnEventExam?.addEventListener('click', () => switchTab('event-exam'));
   tabBtnEventScoreboard?.addEventListener('click', () => switchTab('event-scoreboard'));
+
+  // Topbar Uptime Badge Shortcut
+  container.querySelector('.topbar-uptime-badge')?.addEventListener('click', (e) => {
+    e.preventDefault();
+    switchTab('uptime-monitor');
+  });
+
+  // Sidebar System Health Card Shortcut
+  container.querySelector('#sidebar-system-card')?.addEventListener('click', () => {
+    soundEngine.playClick();
+    switchTab('uptime-monitor');
+  });
 
   // Cross-Navigation Shortcuts
   container.querySelector('#btn-goto-events-list-from-add')?.addEventListener('click', () => switchTab('events'));
@@ -6197,7 +6313,13 @@ export function renderAdminDashboardView(
       };
     }
 
-    // UptimeRobot live ping & copy monitor URL listeners
+    await loadDailyData();
+  }
+
+  // =========================================================================
+  // MODULE: UPTIME MONITOR (24/7 Keep-Alive & Health Diagnostics)
+  // =========================================================================
+  function initUptimeMonitorModule() {
     const btnTestPing = container.querySelector<HTMLButtonElement>('#btn-test-health-ping');
     const pingLatencyVal = container.querySelector<HTMLElement>('#ping-latency-val');
     const uptimeStatusBadge = container.querySelector<HTMLElement>('#uptime-backend-status-badge');
@@ -6243,8 +6365,6 @@ export function renderAdminDashboardView(
         showToast('Testing live backend health ping...', 'info');
       };
     }
-    // Auto-ping once on load
-    testHealthPing();
 
     container.querySelectorAll('.btn-copy-monitor-url').forEach((btn) => {
       btn.addEventListener('click', (e) => {
@@ -6258,7 +6378,7 @@ export function renderAdminDashboardView(
       });
     });
 
-    await loadDailyData();
+    testHealthPing();
   }
 
   // =========================================================================

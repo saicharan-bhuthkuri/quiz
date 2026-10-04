@@ -6360,5 +6360,19 @@ const ALPHABET_COLORS: Record<string, { bg: string; text: string; border: string
 function renderAlphabetAvatar(name: string, extraClass: string = ''): string {
   const letter = (name ? name.trim().charAt(0) : 'E').toUpperCase();
   const c = ALPHABET_COLORS[letter] || { bg: '#e0e7ff', text: '#4338ca', border: '#c7d2fe' };
-  return `<div class="alphabet-avatar ${extraClass}" style="background-color: ${c.bg}; color: ${c.text}; border: 1.5px solid ${c.border};" aria-label="${escapeHtml(name)}">${letter}</div>`;
+
+  let sizePx = 32;
+  let fontRem = '0.88rem';
+  if (extraClass.includes('table-avatar-md')) {
+    sizePx = 52;
+    fontRem = '1.35rem';
+  } else if (extraClass.includes('table-avatar-lg') || extraClass.includes('modal-avatar')) {
+    sizePx = 64;
+    fontRem = '1.75rem';
+  } else if (extraClass.includes('admin-table-avatar')) {
+    sizePx = 34;
+    fontRem = '0.92rem';
+  }
+
+  return `<div class="alphabet-avatar ${extraClass}" style="background-color: ${c.bg}; color: ${c.text}; border: 1.5px solid ${c.border}; width: ${sizePx}px; height: ${sizePx}px; min-width: ${sizePx}px; min-height: ${sizePx}px; border-radius: 50%; display: inline-flex; align-items: center; justify-content: center; font-size: ${fontRem}; font-weight: 800; line-height: 1; flex-shrink: 0; user-select: none; box-shadow: 0 1px 3px rgba(0,0,0,0.06);" aria-label="${escapeHtml(name)}">${letter}</div>`;
 }

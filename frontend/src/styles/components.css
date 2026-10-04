@@ -2974,15 +2974,67 @@
   flex-shrink: 0;
 }
 
+.alphabet-avatar {
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  border-radius: 50% !important;
+  font-family: var(--font-heading, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif) !important;
+  font-weight: 800 !important;
+  user-select: none !important;
+  flex-shrink: 0 !important;
+  text-align: center !important;
+  line-height: 1 !important;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08);
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.table-avatar-sm,
+.alphabet-avatar.table-avatar-sm {
+  width: 32px !important;
+  height: 32px !important;
+  min-width: 32px !important;
+  min-height: 32px !important;
+  font-size: 0.88rem !important;
+  border-radius: 50% !important;
+}
+
+.table-avatar-md,
+.alphabet-avatar.table-avatar-md {
+  width: 52px !important;
+  height: 52px !important;
+  min-width: 52px !important;
+  min-height: 52px !important;
+  font-size: 1.35rem !important;
+  border-radius: 50% !important;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1) !important;
+}
+
+.table-avatar-lg,
+.alphabet-avatar.table-avatar-lg {
+  width: 72px !important;
+  height: 72px !important;
+  min-width: 72px !important;
+  min-height: 72px !important;
+  font-size: 1.85rem !important;
+  border-radius: 50% !important;
+  box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12) !important;
+}
+
 .admin-table-avatar.alphabet-avatar {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  font-family: var(--font-display, inherit);
-  font-weight: 800;
-  font-size: 0.92rem;
-  letter-spacing: -0.02em;
-  user-select: none;
+  display: inline-flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
+  border-radius: 50% !important;
+  font-family: var(--font-heading, inherit) !important;
+  font-weight: 800 !important;
+  font-size: 0.92rem !important;
+  letter-spacing: -0.02em !important;
+  user-select: none !important;
   box-shadow: 0 1px 2px rgba(0, 0, 0, 0.04);
 }
 

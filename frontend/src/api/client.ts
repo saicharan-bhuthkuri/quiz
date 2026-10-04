@@ -530,4 +530,10 @@ export async function apiControlUptimeRobotMonitor(action: 'pause' | 'resume', m
   return res.json();
 }
 
+export async function apiGetUsers(): Promise<AdminUserRecord[]> {
+  const res = await apiGetAdminUsers();
+  return res.success && Array.isArray(res.users) ? res.users : [];
+}
+
+
 

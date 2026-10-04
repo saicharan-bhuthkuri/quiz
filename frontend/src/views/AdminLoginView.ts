@@ -60,14 +60,14 @@ export function renderAdminLoginView(
             </button>
           </form>
 
-          <!-- 1-Click Demo Admin Fill Box -->
-          <div class="demo-account-box" style="background: #f0fdf4; border-color: #bbf7d0;">
+          <!-- Administrator Access Notice -->
+          <div class="demo-account-box" style="background: #f8fafc; border-color: #e2e8f0;">
             <div class="demo-account-info">
-              <span class="demo-account-title" style="color: #166534;">${icon('Zap', 14)} Auto-Fill Admin Credentials</span>
-              <span class="demo-account-creds" style="color: #15803d;">saicharanbhuthkuri468@gmail.com • Charan@468</span>
+              <span class="demo-account-title" style="color: #334155;">${icon('ShieldCheck', 14)} Protected Admin Portal</span>
+              <span class="demo-account-creds" style="color: #64748b;">Superadmin: saicharanbhuthkuri468@gmail.com</span>
             </div>
-            <button type="button" id="btn-fill-admin-creds" class="btn-demo-fill" style="background: #16a34a;">
-              Load Key
+            <button type="button" id="btn-fill-admin-creds" class="btn-demo-fill" style="background: #0284c7;">
+              Select Email
             </button>
           </div>
         </div>
@@ -112,8 +112,8 @@ export function renderAdminLoginView(
     soundEngine.playClick();
     if (emailInput && pwdInput) {
       emailInput.value = 'saicharanbhuthkuri468@gmail.com';
-      pwdInput.value = 'Charan@468';
-      showToast('Admin credentials loaded. Click Authenticate!', 'info');
+      pwdInput.focus();
+      showToast('Admin email set. Please enter your password to authenticate.', 'info');
     }
   });
 

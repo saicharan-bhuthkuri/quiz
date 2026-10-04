@@ -211,7 +211,7 @@ export function renderDailyQuizView(
   let userAnswers: { selected: number; isCorrect: boolean; timeSeconds: number }[] = [];
   let questionStartTime = Date.now();
   let answered = false;
-  let timerInterval: NodeJS.Timeout | null = null;
+  let timerInterval: ReturnType<typeof setInterval> | null = null;
   let remainingSeconds = 45;
 
   function renderCategorySelector() {

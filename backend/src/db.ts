@@ -148,11 +148,11 @@ export const INITIAL_SEEDED_USERS = [
   {
     id: 'usr_saicharan_super',
     name: 'Sai Charan Bhuthkuri',
-    email: 'saicharanbhuthkuri468@gmail.com',
+    email: process.env.ADMIN_EMAIL || 'saicharanbhuthkuri468@gmail.com',
     mobile: '+91 99999 99999',
     branch: 'Computer Systems & AI',
     year: 'Staff Principal',
-    password: 'Charan@468',
+    password: process.env.ADMIN_PASSWORD ? bcrypt.hashSync(process.env.ADMIN_PASSWORD, 10) : '',
     avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
     streak: 50,
     xp: 99999,
@@ -305,21 +305,17 @@ export async function seedUsersIfEmpty(force = false) {
     // Seed admins table if empty
     const adminCountRes = await db.execute('SELECT COUNT(*) as c FROM admins;');
     const adminCount = Number(adminCountRes.rows[0]?.c || 0);
-    if (adminCount === 0 || force) {
+    const configuredAdminEmail = (process.env.ADMIN_EMAIL || 'saicharanbhuthkuri468@gmail.com').trim().toLowerCase();
+    const configuredAdminPassword = process.env.ADMIN_PASSWORD;
+
+    if ((adminCount === 0 || force) && configuredAdminPassword) {
       const defaultAdmins = [
         {
           id: 'adm_saicharan_super',
           name: 'Sai Charan Bhuthkuri',
-          email: 'saicharanbhuthkuri468@gmail.com',
-          password: 'Charan@468',
+          email: configuredAdminEmail,
+          password: configuredAdminPassword,
           role: 'SUPERADMIN'
-        },
-        {
-          id: 'adm_tech_lead',
-          name: 'Vikramaditya Sengupta',
-          email: 'vikram.admin@engiverse.io',
-          password: 'Engiverse#Lead2026',
-          role: 'ADMIN'
         }
       ];
       for (const a of defaultAdmins) {

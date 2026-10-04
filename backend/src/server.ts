@@ -1,12 +1,33 @@
-import express, { Request, Response } from 'express';
+import express, { Request, Response, NextFunction } from 'express';
 import http from 'http';
 import cors from 'cors';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
 import fs from 'fs';
 import path from 'path';
+import crypto from 'crypto';
 import { db, initDatabase, seedUsersIfEmpty, getSystemSetting, setSystemSetting } from './db.js';
 import { realtimeEngine } from './realtime.js';
+import {
+  authRateLimiter,
+  publicRateLimiter,
+  userRateLimiter,
+  recordAuthFailure,
+  recordAuthSuccess
+} from './middleware/rateLimiter.js';
+import { validateBody, validateQuery } from './middleware/validate.js';
+import {
+  registerUserSchema,
+  loginSchema,
+  quizAttemptSchema,
+  eventRegisterSchema,
+  uptimeConfigSchema,
+  uptimePingSchema,
+  uptimeActionSchema,
+  avatarUploadSchema
+} from './schemas/index.js';
+import { requestIdMiddleware, centralizedErrorHandler } from './middleware/errorHandler.js';
+import { processAndSaveBase64Image, getSafeFilePath } from './utils/fileUpload.js';
 
 dotenv.config();
 
@@ -14,8 +35,10 @@ const app = express();
 const server = http.createServer(app);
 const PORT = process.env.PORT || 5000;
 
+// Security & Parsing Middlewares
+app.use(requestIdMiddleware);
 app.use(cors({ origin: '*' }));
-app.use(express.json());
+app.use(express.json({ limit: '10mb' }));
 
 // Initialize DB schema & WebSocket server
 initDatabase();
@@ -24,7 +47,7 @@ realtimeEngine.init(server);
 /* ==========================================================================
    UPTIMEROBOT & SYSTEM HEALTH MONITORING
    ========================================================================== */
-app.all(['/health', '/api/health', '/ping', '/api/ping'], (_req: Request, res: Response) => {
+app.all(['/health', '/api/health', '/ping', '/api/ping'], publicRateLimiter, (_req: Request, res: Response) => {
   res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
   res.setHeader('X-Uptime-Monitor', 'Engiverse-Active');
   res.setHeader('Access-Control-Allow-Origin', '*');
@@ -125,7 +148,7 @@ function updateEnvFileKey(keyName: string, keyValue: string): void {
   }
 }
 
-app.get('/api/uptimerobot/monitor', async (req: Request, res: Response) => {
+app.get('/api/uptimerobot/monitor', publicRateLimiter, async (req: Request, res: Response) => {
   try {
     const queryKey = req.query.apiKey ? String(req.query.apiKey).trim() : '';
     const headerKey = req.headers['x-uptimerobot-key'] ? String(req.headers['x-uptimerobot-key']).trim() : '';
@@ -348,7 +371,7 @@ app.get('/api/uptimerobot/monitor', async (req: Request, res: Response) => {
 });
 
 // Live Endpoint Ping Check
-app.post('/api/uptimerobot/ping', async (req: Request, res: Response) => {
+app.post('/api/uptimerobot/ping', userRateLimiter, validateBody(uptimePingSchema), async (req: Request, res: Response) => {
   try {
     const targetUrl = req.body?.url || 'https://engiverse-backend.onrender.com/api/health';
     const t0 = performance.now();
@@ -379,12 +402,12 @@ app.post('/api/uptimerobot/ping', async (req: Request, res: Response) => {
       timestamp: new Date().toISOString()
     });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Ping failed' });
+    res.status(500).json({ success: false, error: 'Ping execution failed' });
   }
 });
 
 // Pause / Resume Monitor
-app.post('/api/uptimerobot/action', async (req: Request, res: Response) => {
+app.post('/api/uptimerobot/action', userRateLimiter, validateBody(uptimeActionSchema), async (req: Request, res: Response) => {
   try {
     const { action, monitorId } = req.body;
     const dbKey = (await getSystemSetting('UPTIMEROBOT_API_KEY')) || '';
@@ -424,16 +447,13 @@ app.post('/api/uptimerobot/action', async (req: Request, res: Response) => {
       newStatus: action === 'pause' ? 'PAUSED' : 'UP'
     });
   } catch (err: any) {
-    res.status(500).json({ success: false, error: err.message || 'Action failed' });
+    res.status(500).json({ success: false, error: 'Failed to update monitor state' });
   }
 });
 
-app.post('/api/uptimerobot/config', async (req: Request, res: Response) => {
+app.post('/api/uptimerobot/config', userRateLimiter, validateBody(uptimeConfigSchema), async (req: Request, res: Response) => {
   try {
     const { apiKey, monitorId } = req.body;
-    if (!apiKey || typeof apiKey !== 'string') {
-      return res.status(400).json({ error: 'API key is required' });
-    }
 
     const cleanKey = apiKey.trim();
     const testParams = new URLSearchParams();
@@ -503,13 +523,9 @@ app.get('/api/uptimerobot/config', async (_req: Request, res: Response) => {
 /* ==========================================================================
    USER AUTHENTICATION (TURSO DB)
    ========================================================================== */
-app.post('/api/auth/register', async (req: Request, res: Response) => {
+app.post('/api/auth/register', authRateLimiter, validateBody(registerUserSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { name, email, mobile, branch, year, password, avatar } = req.body;
-
-    if (!name || !email || !password) {
-      return res.status(400).json({ error: 'Name, email, and password are required' });
-    }
 
     // Check if user already exists
     const checkRes = await db.execute({
@@ -518,7 +534,8 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
     });
 
     if (checkRes.rows.length > 0) {
-      return res.status(409).json({ error: 'An account with this email already exists' });
+      recordAuthFailure(req);
+      return res.status(409).json({ success: false, error: 'An account with this email already exists' });
     }
 
     const userId = 'usr_' + Math.random().toString(36).substring(2, 11);
@@ -557,20 +574,16 @@ app.post('/api/auth/register', async (req: Request, res: Response) => {
       joinedAt: new Date().toLocaleDateString()
     };
 
+    recordAuthSuccess(req);
     return res.status(201).json({ success: true, user });
   } catch (error: any) {
-    console.error('Registration API Error:', error);
-    return res.status(500).json({ error: error.message || 'Failed to register user' });
+    next(error);
   }
 });
 
-app.post('/api/auth/login', async (req: Request, res: Response) => {
+app.post('/api/auth/login', authRateLimiter, validateBody(loginSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
-
-    if (!email || !password) {
-      return res.status(400).json({ error: 'Email and password are required' });
-    }
 
     let result = await db.execute({
       sql: 'SELECT * FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1;',
@@ -580,14 +593,14 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     if (result.rows.length === 0) {
       // Check if this is an administrator or superadmin logging in
       const adminEmail = (process.env.ADMIN_EMAIL || 'saicharanbhuthkuri468@gmail.com').trim().toLowerCase();
-      const adminPassword = process.env.ADMIN_PASSWORD || 'Charan@468';
+      const adminPassword = process.env.ADMIN_PASSWORD;
 
       const adminRes = await db.execute({
         sql: 'SELECT id, name, email, password, role FROM admins WHERE LOWER(email) = LOWER(?) LIMIT 1;',
         args: [email.trim()]
       });
 
-      const isEnvAdmin = email.trim().toLowerCase() === adminEmail && password === adminPassword;
+      const isEnvAdmin = Boolean(adminPassword && email.trim().toLowerCase() === adminEmail && password === adminPassword);
       let matchedAdmin: any = null;
 
       if (adminRes.rows.length > 0) {
@@ -607,7 +620,6 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
       }
 
       if (matchedAdmin) {
-        // Automatically insert into users table so admin has full engineer access
         const newHash = await bcrypt.hash(password, 10);
         await db.execute({
           sql: `INSERT OR REPLACE INTO users (id, name, email, mobile, branch, year, password, avatar, streak, xp, badge, created_at)
@@ -630,7 +642,8 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
           args: [email.trim()]
         });
       } else {
-        return res.status(404).json({ error: 'No account found with this email' });
+        recordAuthFailure(req);
+        return res.status(401).json({ success: false, error: 'Invalid email or password' });
       }
     }
 
@@ -640,7 +653,8 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
     const legacyMatch = storedHash === password;
 
     if (!isMatch && !legacyMatch) {
-      return res.status(401).json({ error: 'Invalid password' });
+      recordAuthFailure(req);
+      return res.status(401).json({ success: false, error: 'Invalid email or password' });
     }
 
     // Transparently upgrade legacy plain text password to secure bcrypt hash
@@ -667,21 +681,21 @@ app.post('/api/auth/login', async (req: Request, res: Response) => {
       joinedAt: String(row.created_at || new Date().toLocaleDateString())
     };
 
+    recordAuthSuccess(req);
     return res.json({ success: true, user });
   } catch (error: any) {
-    console.error('Login API Error:', error);
-    return res.status(500).json({ error: error.message || 'Login failed' });
+    next(error);
   }
 });
 
 /* ==========================================================================
    ADMIN AUTHENTICATION & DASHBOARD APIS
    ========================================================================== */
-app.post('/api/admin/login', async (req: Request, res: Response) => {
+app.post('/api/admin/login', authRateLimiter, validateBody(loginSchema), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { email, password } = req.body;
     const adminEmail = (process.env.ADMIN_EMAIL || 'saicharanbhuthkuri468@gmail.com').trim().toLowerCase();
-    const adminPassword = process.env.ADMIN_PASSWORD || 'Charan@468';
+    const adminPassword = process.env.ADMIN_PASSWORD;
 
     // First check admins database table
     const dbAdmin = await db.execute({
@@ -704,6 +718,7 @@ app.post('/api/admin/login', async (req: Request, res: Response) => {
           });
         }
 
+        recordAuthSuccess(req);
         return res.json({
           success: true,
           admin: {
@@ -718,7 +733,8 @@ app.post('/api/admin/login', async (req: Request, res: Response) => {
     }
 
     // Fallback check against env credentials
-    if (email && email.trim().toLowerCase() === adminEmail && password === adminPassword) {
+    if (adminPassword && email && email.trim().toLowerCase() === adminEmail && password === adminPassword) {
+      recordAuthSuccess(req);
       return res.json({
         success: true,
         admin: {
@@ -731,10 +747,10 @@ app.post('/api/admin/login', async (req: Request, res: Response) => {
       });
     }
 
-    return res.status(401).json({ error: 'Invalid admin email or security key' });
+    recordAuthFailure(req);
+    return res.status(401).json({ success: false, error: 'Invalid administrative credentials' });
   } catch (error: any) {
-    console.error('Admin login error:', error);
-    return res.status(500).json({ error: error.message || 'Internal login error' });
+    next(error);
   }
 });
 
@@ -1590,7 +1606,7 @@ app.get('/api/admin/daily-dashboard', async (_req: Request, res: Response) => {
 });
 
 // 15. Dedicated Event Dashboard API (Strictly limited to the selected event only)
-app.get('/api/admin/event-dashboard/:eventId', async (req: Request, res: Response) => {
+app.get('/api/admin/event-dashboard/:eventId', async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { eventId } = req.params;
 
@@ -1666,10 +1682,81 @@ app.get('/api/admin/event-dashboard/:eventId', async (req: Request, res: Respons
       leaderboard
     });
   } catch (error: any) {
-    console.error('Event dashboard fetch error:', error);
-    return res.status(500).json({ error: error.message || 'Failed to fetch event dashboard data' });
+    next(error);
   }
 });
+
+/* ==========================================================================
+   QUIZ ATTEMPTS (SECURE BACKEND RECORDING & RATE LIMITING)
+   ========================================================================== */
+app.post('/api/quiz/attempt', userRateLimiter, validateBody(quizAttemptSchema), async (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const { userEmail, userName, score, totalQuestions, xpEarned, accuracy, rankTitle } = req.body;
+    const attemptId = 'att_' + crypto.randomUUID().substring(0, 12);
+    const calculatedAccuracy = typeof accuracy === 'number' ? accuracy : Math.round((score / (totalQuestions || 1)) * 100);
+
+    await db.execute({
+      sql: `INSERT INTO quiz_attempts (id, user_email, user_name, score, total_questions, xp_earned, accuracy, rank_title, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'));`,
+      args: [
+        attemptId,
+        userEmail,
+        userName,
+        score,
+        totalQuestions,
+        xpEarned,
+        calculatedAccuracy,
+        rankTitle
+      ]
+    });
+
+    if (userEmail) {
+      await db.execute({
+        sql: `UPDATE users SET xp = xp + ?, streak = streak + 1 WHERE LOWER(email) = LOWER(?);`,
+        args: [xpEarned, userEmail]
+      });
+    }
+
+    return res.status(201).json({ success: true, attemptId });
+  } catch (err) {
+    next(err);
+  }
+});
+
+/* ==========================================================================
+   SECURE FILE UPLOAD & ASSET DELIVERY SYSTEM
+   ========================================================================== */
+// Secure upload endpoint for custom avatars with magic byte verification
+app.post('/api/upload/avatar', userRateLimiter, validateBody(avatarUploadSchema), (req: Request, res: Response, next: NextFunction) => {
+  try {
+    const result = processAndSaveBase64Image(req.body.dataUrl);
+    if (!result.success || !result.filename) {
+      return res.status(400).json({ success: false, error: result.error || 'Invalid image upload' });
+    }
+    return res.json({ success: true, url: `/api/uploads/${result.filename}` });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// Secure file delivery with path traversal protection, sandboxing, and execution prevention
+app.get('/api/uploads/:filename', (req: Request, res: Response) => {
+  const fileInfo = getSafeFilePath(req.params.filename);
+  if (!fileInfo.exists || !fileInfo.fullPath) {
+    return res.status(404).json({ success: false, error: 'The requested resource was not found' });
+  }
+
+  // Prevent script execution, MIME sniffing, and framing
+  res.setHeader('Content-Type', fileInfo.mime || 'application/octet-stream');
+  res.setHeader('Content-Disposition', 'inline; filename="asset"');
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('Content-Security-Policy', "default-src 'none'; style-src 'unsafe-inline'; sandbox");
+  res.setHeader('Cache-Control', 'public, max-age=86400, immutable');
+  return res.sendFile(fileInfo.fullPath);
+});
+
+// Centralized Error Handling Middleware (prevents information leakage & logs server-side)
+app.use(centralizedErrorHandler);
 
 // Start HTTP + WebSocket Server
 server.listen(Number(PORT), '0.0.0.0', () => {

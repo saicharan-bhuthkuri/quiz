@@ -11,7 +11,7 @@ type MessageHandler<T = any> = (payload: T) => void;
 class RealtimeWebSocketClient {
   private ws: WebSocket | null = null;
   private handlers = new Map<string, Set<MessageHandler>>();
-  private reconnectTimeout: NodeJS.Timeout | null = null;
+  private reconnectTimeout: ReturnType<typeof setTimeout> | null = null;
   private isExplicitlyClosed = false;
   private currentUser: { id: string; name: string; email: string; role?: string } | null = null;
   private currentEventId: string | null = null;

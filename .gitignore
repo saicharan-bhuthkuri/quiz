@@ -16,6 +16,11 @@ dist/
 build/
 */build/
 
+# Storage & Uploads
+storage/
+*/storage/
+backend/storage/
+
 # Logs
 logs/
 *.log

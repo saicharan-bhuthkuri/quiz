@@ -183,6 +183,15 @@ export function renderAdminDashboardView(
               </div>
             </div>
 
+            <!-- UptimeRobot 24/7 Monitor Status Badge -->
+            <a href="https://uptimerobot.com" target="_blank" rel="noopener noreferrer" class="topbar-uptime-badge" title="UptimeRobot: 24/7 Keep-Alive &amp; Availability Monitor Active">
+              <span class="live-pulse-dot" style="background: #0284c7; box-shadow: 0 0 0 3px rgba(2, 132, 199, 0.25);"></span>
+              <div class="db-badge-info">
+                <span class="db-badge-name" style="color: #0369a1;">UptimeRobot</span>
+                <span class="db-badge-status" style="color: #0284c7;">24/7 Active</span>
+              </div>
+            </a>
+
             <div class="topbar-sync-tag" id="topbar-sync-time" title="Last synchronized time">
               Synced: Just now
             </div>
@@ -255,6 +264,78 @@ export function renderAdminDashboardView(
                   <span class="stat-val" id="daily-metric-total-xp">— XP</span>
                   <span class="stat-title">Practice XP Distributed</span>
                   <span class="stat-sub">Earned via daily challenges</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- UptimeRobot 24/7 Service Health & Monitor Hub -->
+            <div class="uptimerobot-hub-card" style="margin: 1.5rem 0; background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 100%); border: 1.5px solid #bae6fd; border-radius: var(--radius-xl); padding: 1.25rem 1.5rem; box-shadow: 0 4px 16px rgba(2, 132, 199, 0.08);">
+              <div style="display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 1rem; margin-bottom: 1rem;">
+                <div style="display: flex; align-items: center; gap: 0.75rem;">
+                  <div style="width: 40px; height: 40px; border-radius: 12px; background: #0284c7; display: flex; align-items: center; justify-content: center; color: #ffffff; box-shadow: 0 4px 10px rgba(2, 132, 199, 0.3);">
+                    ${icon('Activity', 22)}
+                  </div>
+                  <div>
+                    <div style="display: flex; align-items: center; gap: 0.5rem; flex-wrap: wrap;">
+                      <h3 style="margin: 0; font-size: 1.05rem; font-weight: 800; color: #0369a1;">UptimeRobot 24/7 Monitor &amp; Keep-Alive</h3>
+                      <span class="count-pill-modern" style="background: #e0f2fe; color: #0284c7; border-color: #7dd3fc; font-size: 0.7rem; font-weight: 700;">Zero Cold Starts</span>
+                    </div>
+                    <p style="margin: 0.2rem 0 0; font-size: 0.8rem; color: #075985;">Continuous 5-minute health pings keep the Render Node.js backend awake 24/7 and eliminate free-tier instance sleeping.</p>
+                  </div>
+                </div>
+
+                <div style="display: flex; align-items: center; gap: 0.6rem;">
+                  <button id="btn-test-health-ping" class="btn btn-sm btn-secondary" style="border-color: #7dd3fc; color: #0284c7; background: #ffffff;" title="Test live ping now">
+                    <span>${icon('Zap', 14)} Test Live Ping</span>
+                  </button>
+                  <a href="https://uptimerobot.com/dashboard" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary" style="background: #0284c7; border-color: #0284c7; color: #ffffff;" title="Open UptimeRobot Dashboard">
+                    <span>${icon('ExternalLink', 14)} UptimeRobot Dashboard</span>
+                  </a>
+                </div>
+              </div>
+
+              <!-- Monitor Endpoints Grid -->
+              <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 0.75rem;">
+                <!-- Backend API Monitor -->
+                <div style="background: #ffffff; border: 1px solid #bae6fd; border-radius: var(--radius-lg); padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #0369a1; display: flex; align-items: center; gap: 0.4rem;">
+                      <span class="live-pulse-dot" style="background: #10b981;"></span>
+                      Backend API (Render)
+                    </span>
+                    <span id="uptime-backend-status-badge" style="font-size: 0.68rem; font-weight: 700; color: #047857; background: #d1fae5; padding: 0.15rem 0.5rem; border-radius: 999px;">HTTP 200 OK</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.35rem 0.6rem;">
+                    <code style="font-size: 0.73rem; color: #0f172a; flex: 1; word-break: break-all;">https://engiverse-backend.onrender.com/api/health</code>
+                    <button class="btn-copy-monitor-url" data-url="https://engiverse-backend.onrender.com/api/health" style="background: transparent; border: none; cursor: pointer; color: #0284c7;" title="Copy Backend Health URL">
+                      ${icon('Copy', 14)}
+                    </button>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.7rem; color: #64748b;">
+                    <span>Interval: <strong>5 mins</strong> (prevents sleeping)</span>
+                    <span id="uptime-backend-latency">⚡ Latency: <strong id="ping-latency-val">—</strong></span>
+                  </div>
+                </div>
+
+                <!-- Frontend SPA Monitor -->
+                <div style="background: #ffffff; border: 1px solid #bae6fd; border-radius: var(--radius-lg); padding: 0.85rem 1rem; display: flex; flex-direction: column; gap: 0.4rem;">
+                  <div style="display: flex; align-items: center; justify-content: space-between;">
+                    <span style="font-size: 0.78rem; font-weight: 700; color: #0369a1; display: flex; align-items: center; gap: 0.4rem;">
+                      <span class="live-pulse-dot" style="background: #10b981;"></span>
+                      Frontend Web App (Firebase)
+                    </span>
+                    <span style="font-size: 0.68rem; font-weight: 700; color: #047857; background: #d1fae5; padding: 0.15rem 0.5rem; border-radius: 999px;">Global Edge CDN</span>
+                  </div>
+                  <div style="display: flex; align-items: center; gap: 0.5rem; background: #f8fafc; border: 1px solid #e2e8f0; border-radius: 6px; padding: 0.35rem 0.6rem;">
+                    <code style="font-size: 0.73rem; color: #0f172a; flex: 1; word-break: break-all;">https://engiverse-quiz.web.app</code>
+                    <button class="btn-copy-monitor-url" data-url="https://engiverse-quiz.web.app" style="background: transparent; border: none; cursor: pointer; color: #0284c7;" title="Copy Frontend URL">
+                      ${icon('Copy', 14)}
+                    </button>
+                  </div>
+                  <div style="display: flex; align-items: center; justify-content: space-between; font-size: 0.7rem; color: #64748b;">
+                    <span>Interval: <strong>5 mins</strong> (SSL &amp; CDN check)</span>
+                    <span>Status: <strong style="color: #059669;">Operational</strong></span>
+                  </div>
                 </div>
               </div>
             </div>
@@ -6115,6 +6196,67 @@ export function renderAdminDashboardView(
         showToast('Daily quiz submissions CSV exported successfully!', 'success');
       };
     }
+
+    // UptimeRobot live ping & copy monitor URL listeners
+    const btnTestPing = container.querySelector<HTMLButtonElement>('#btn-test-health-ping');
+    const pingLatencyVal = container.querySelector<HTMLElement>('#ping-latency-val');
+    const uptimeStatusBadge = container.querySelector<HTMLElement>('#uptime-backend-status-badge');
+
+    const testHealthPing = async () => {
+      if (pingLatencyVal) pingLatencyVal.textContent = 'Pinging...';
+      const t0 = performance.now();
+      try {
+        const res = await fetch('https://engiverse-backend.onrender.com/api/health', {
+          method: 'GET',
+          cache: 'no-store'
+        });
+        const elapsed = Math.round(performance.now() - t0);
+        if (res.ok) {
+          if (pingLatencyVal) pingLatencyVal.textContent = `${elapsed}ms`;
+          if (uptimeStatusBadge) {
+            uptimeStatusBadge.textContent = 'HTTP 200 OK';
+            uptimeStatusBadge.style.color = '#047857';
+            uptimeStatusBadge.style.background = '#d1fae5';
+          }
+        } else {
+          if (pingLatencyVal) pingLatencyVal.textContent = `HTTP ${res.status}`;
+          if (uptimeStatusBadge) {
+            uptimeStatusBadge.textContent = `HTTP ${res.status}`;
+            uptimeStatusBadge.style.color = '#b91c1c';
+            uptimeStatusBadge.style.background = '#fee2e2';
+          }
+        }
+      } catch (err) {
+        if (pingLatencyVal) pingLatencyVal.textContent = 'Offline';
+        if (uptimeStatusBadge) {
+          uptimeStatusBadge.textContent = 'Offline';
+          uptimeStatusBadge.style.color = '#b91c1c';
+          uptimeStatusBadge.style.background = '#fee2e2';
+        }
+      }
+    };
+
+    if (btnTestPing) {
+      btnTestPing.onclick = () => {
+        soundEngine.playClick();
+        testHealthPing();
+        showToast('Testing live backend health ping...', 'info');
+      };
+    }
+    // Auto-ping once on load
+    testHealthPing();
+
+    container.querySelectorAll('.btn-copy-monitor-url').forEach((btn) => {
+      btn.addEventListener('click', (e) => {
+        const target = e.currentTarget as HTMLElement;
+        const urlToCopy = target.getAttribute('data-url');
+        if (urlToCopy) {
+          navigator.clipboard.writeText(urlToCopy);
+          soundEngine.playClick();
+          showToast('Monitor URL copied to clipboard!', 'success');
+        }
+      });
+    });
 
     await loadDailyData();
   }

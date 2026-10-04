@@ -20,8 +20,21 @@ initDatabase();
 realtimeEngine.init(server);
 
 /* ==========================================================================
-   HEALTH CHECKS
+   UPTIMEROBOT & SYSTEM HEALTH MONITORING
    ========================================================================== */
+app.all(['/health', '/api/health', '/ping', '/api/ping'], (_req: Request, res: Response) => {
+  res.setHeader('Cache-Control', 'no-cache, no-store, must-revalidate');
+  res.setHeader('X-Uptime-Monitor', 'Engiverse-Active');
+  res.setHeader('Access-Control-Allow-Origin', '*');
+  res.status(200).json({
+    status: 'ok',
+    service: 'Engiverse Backend API',
+    monitor: 'UptimeRobot Ready',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString()
+  });
+});
+
 app.get('/', (_req: Request, res: Response) => {
   res.json({
     status: 'ok',
@@ -29,13 +42,10 @@ app.get('/', (_req: Request, res: Response) => {
     version: '1.0.0',
     endpoints: {
       health: '/api/health',
+      ping: '/api/ping',
       realtimeWebSocket: '/ws'
     }
   });
-});
-
-app.get('/api/health', (_req: Request, res: Response) => {
-  res.json({ status: 'ok', service: 'Engiverse Backend API', timestamp: new Date() });
 });
 
 /* ==========================================================================

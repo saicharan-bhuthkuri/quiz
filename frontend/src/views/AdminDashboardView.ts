@@ -2,7 +2,6 @@ import {
   apiGetAdminUsers,
   apiGetAdminStats,
   apiDeleteUser,
-  apiSeedUsers,
   apiGetAdminList,
   apiAddAdmin,
   apiRemoveAdmin,
@@ -2705,24 +2704,15 @@ export function renderAdminDashboardView(
         <tr>
           <td colspan="6" style="text-align: center; padding: 4rem 2rem;">
             <div class="empty-state-wrap">
-              <span class="empty-state-icon" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">${icon('Search', 36)}</span>
+              <span class="empty-state-icon" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">${icon('Users', 36)}</span>
               <h3 style="font-size: 1.15rem; color: var(--text-main); margin-bottom: 0.4rem;">No registered users found</h3>
-              <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 400px; margin: 0 auto 1.25rem auto;">
-                No engineer records match your current search or filter query.
+              <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 420px; margin: 0 auto;">
+                No engineer accounts match your search or have registered yet. New user registrations will appear here automatically.
               </p>
-              <button id="btn-empty-seed" class="btn btn-primary btn-pill">
-                <span>${icon('Zap', 15)} Seed Sample Users</span>
-              </button>
             </div>
           </td>
         </tr>
       `;
-
-      tbody.querySelector('#btn-empty-seed')?.addEventListener('click', async () => {
-        soundEngine.playClick();
-        await apiSeedUsers();
-        await loadAllData();
-      });
       return;
     }
 

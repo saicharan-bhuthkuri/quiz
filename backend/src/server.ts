@@ -622,27 +622,22 @@ app.post('/api/auth/login', authRateLimiter, validateBody(loginSchema), async (r
       }
 
       if (matchedAdmin) {
-        const newHash = await bcrypt.hash(password, 10);
-        await db.execute({
-          sql: `INSERT OR REPLACE INTO users (id, name, email, mobile, branch, year, password, avatar, streak, xp, badge, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, 50, 99999, ?, datetime('now'));`,
-          args: [
-            matchedAdmin.id || 'usr_primary_super',
-            matchedAdmin.name || adminName,
-            email.trim(),
-            '+91 99999 99999',
-            'Computer Systems & AI',
-            'Staff Principal',
-            newHash,
-            'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-            `${matchedAdmin.role || 'SUPERADMIN'} • Principal Systems Architect`
-          ]
-        });
-
-        result = await db.execute({
-          sql: 'SELECT * FROM users WHERE LOWER(email) = LOWER(?) LIMIT 1;',
-          args: [email.trim()]
-        });
+        recordAuthSuccess(req);
+        const adminUser = {
+          id: String(matchedAdmin.id || 'adm_primary_super'),
+          name: String(matchedAdmin.name || adminName),
+          email: String(matchedAdmin.email || adminEmail),
+          mobile: '+91 99999 99999',
+          branch: 'Computer Systems & AI',
+          year: 'Staff Principal',
+          discipline: 'Computer Systems & AI',
+          avatar: '',
+          streak: 1,
+          xp: 0,
+          badge: 'SUPERADMIN',
+          joinedAt: new Date().toLocaleDateString()
+        };
+        return res.json({ success: true, user: adminUser });
       } else {
         recordAuthFailure(req);
         return res.status(401).json({ success: false, error: 'Invalid email or password' });
@@ -859,15 +854,9 @@ app.delete('/api/admin/remove/:id', async (req: Request, res: Response) => {
   }
 });
 
-// Seed sample users into Turso DB
+// Seed sample users into Turso DB (disabled)
 app.post('/api/admin/seed', async (_req: Request, res: Response) => {
-  try {
-    const result = await seedUsersIfEmpty(true);
-    res.json({ success: true, message: 'Sample engineering users populated into Turso DB', result });
-  } catch (error: any) {
-    console.error('Seed users error:', error);
-    res.status(500).json({ error: error.message || 'Failed to seed users' });
-  }
+  res.json({ success: false, message: 'Sample user seeding has been permanently disabled' });
 });
 
 // Get all registered users from Turso DB

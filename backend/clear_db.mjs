@@ -48,8 +48,7 @@ async function clearDatabase() {
     console.log('🔄 Resetting user streaks and XP to clean baseline...');
     await db.execute(`
       UPDATE users 
-      SET streak = 1, xp = 250 
-      WHERE email != 'saicharanbhuthkuri468@gmail.com';
+      SET streak = 1, xp = 0;
     `);
 
     // 7. Verify all tables after reset

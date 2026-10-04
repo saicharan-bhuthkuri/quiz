@@ -248,17 +248,6 @@ function setupLoginPage(): void {
 
     if (existing && existing.email.toLowerCase() === email.toLowerCase()) {
       loggedUser = existing;
-    } else if (email.includes('elena')) {
-      loggedUser = {
-        name: 'Elena Rostova',
-        email: 'elena.rostova@quantum.eng',
-        discipline: 'Quantum & Systems',
-        avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-        streak: 42,
-        xp: 48920,
-        badge: 'Grandmaster Engineer',
-        joinedAt: '2024-03-12'
-      };
     } else {
       loggedUser = {
         name: email.split('@')[0],

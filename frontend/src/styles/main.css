@@ -531,10 +531,28 @@ a {
 }
 
 /* Universal Overflow Prevention for Mobile */
-html, body, #app, #landing-view, .portal-viewport, .admin-shell-layout, .admin-main-viewport, .live-arena-viewport {
+html, body, #app, #landing-view, .portal-viewport, .live-arena-viewport {
   overflow-x: hidden !important;
   max-width: 100vw !important;
   width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.admin-shell-layout {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  max-width: 100vw !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.admin-main-viewport {
+  height: 100vh !important;
+  max-height: 100vh !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
   box-sizing: border-box !important;
 }
 

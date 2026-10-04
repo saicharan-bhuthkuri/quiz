@@ -72,7 +72,7 @@ export function renderAdminDashboardView(
               <span class="sidebar-portal-tag">ADMIN PORTAL</span>
             </div>
           </a>
-          <button id="btn-close-sidebar" class="btn-close-sidebar" aria-label="Close slide bar" title="Close Slide Bar">${icon('X', 18)}</button>
+          <button id="btn-close-sidebar" class="btn-close-sidebar" aria-label="Close slide bar" title="Close Slide Bar">${icon('X', 16)}</button>
         </div>
 
         <!-- Navigation Tabs Menu -->
@@ -84,58 +84,58 @@ export function renderAdminDashboardView(
           </div>
           
           <button class="sidebar-nav-btn active" id="tab-btn-daily-dashboard" data-tab="daily-dashboard">
-            <span class="nav-btn-icon">${icon('Activity', 18)}</span>
+            <span class="nav-btn-icon">${icon('Activity', 16)}</span>
             <span class="nav-btn-text">Daily Overview</span>
             <span class="nav-count-badge" id="badge-daily-attempts">0</span>
           </button>
 
           <button class="sidebar-nav-btn" id="tab-btn-users" data-tab="users">
-            <span class="nav-btn-icon">${icon('Users', 18)}</span>
+            <span class="nav-btn-icon">${icon('Users', 16)}</span>
             <span class="nav-btn-text">Users Directory</span>
             <span class="nav-count-badge" id="badge-users-count">0</span>
           </button>
 
           <button class="sidebar-nav-btn" id="tab-btn-admins" data-tab="admins">
-            <span class="nav-btn-icon">${icon('Shield', 18)}</span>
+            <span class="nav-btn-icon">${icon('Shield', 16)}</span>
             <span class="nav-btn-text">List of Admins</span>
             <span class="nav-count-badge" id="badge-admins-count">0</span>
           </button>
 
           <!-- ================= 2. EVENT DASHBOARD (COMPETITIONS & EXAMS) ================= -->
-          <div class="sidebar-group-header" style="margin-top: 1.35rem;">
+          <div class="sidebar-group-header">
             <span class="sidebar-group-label">EVENT DASHBOARD</span>
             <span class="sidebar-group-chip event-chip">Events Only</span>
           </div>
 
           <button class="sidebar-nav-btn" id="tab-btn-event-dashboard" data-tab="event-dashboard">
-            <span class="nav-btn-icon">${icon('LayoutDashboard', 18)}</span>
+            <span class="nav-btn-icon">${icon('LayoutDashboard', 16)}</span>
             <span class="nav-btn-text">Event Overview</span>
             <span class="pulse-dot" id="sidebar-event-live-dot" style="display: none; margin-left: auto;"></span>
           </button>
 
           <button class="sidebar-nav-btn" id="tab-btn-event-register" data-tab="event-register">
-            <span class="nav-btn-icon">${icon('UserPlus', 18)}</span>
+            <span class="nav-btn-icon">${icon('UserPlus', 16)}</span>
             <span class="nav-btn-text">Register Event</span>
           </button>
 
           <button class="sidebar-nav-btn" id="tab-btn-event-participants" data-tab="event-participants">
-            <span class="nav-btn-icon">${icon('Users', 18)}</span>
+            <span class="nav-btn-icon">${icon('Users', 16)}</span>
             <span class="nav-btn-text">Event Participants</span>
           </button>
 
           <button class="sidebar-nav-btn" id="tab-btn-event-questions" data-tab="event-questions">
-            <span class="nav-btn-icon">${icon('HelpCircle', 18)}</span>
+            <span class="nav-btn-icon">${icon('HelpCircle', 16)}</span>
             <span class="nav-btn-text">Question Management</span>
           </button>
 
           <button class="sidebar-nav-btn" id="tab-btn-event-exam" data-tab="event-exam">
-            <span class="nav-btn-icon">${icon('PlayCircle', 18)}</span>
+            <span class="nav-btn-icon">${icon('PlayCircle', 16)}</span>
             <span class="nav-btn-text">Exam Management</span>
             <span class="pulse-dot" id="sidebar-exam-live-dot" style="display: none; margin-left: auto;"></span>
           </button>
 
           <button class="sidebar-nav-btn" id="tab-btn-event-scoreboard" data-tab="event-scoreboard">
-            <span class="nav-btn-icon">${icon('Award', 18)}</span>
+            <span class="nav-btn-icon">${icon('Award', 16)}</span>
             <span class="nav-btn-text">Event Scoreboard</span>
           </button>
         </nav>
@@ -143,7 +143,7 @@ export function renderAdminDashboardView(
         <!-- Sidebar Footer: Current Superadmin Profile -->
         <div class="sidebar-footer-box">
           <div class="current-admin-card">
-            <div class="admin-avatar-shield">${icon('Shield', 16)}</div>
+            <div class="admin-avatar-shield">${icon('Shield', 14)}</div>
             <div class="current-admin-meta">
               <span class="current-admin-name">${escapeHtml(currentAdminName)}</span>
               <span class="current-admin-role">SUPERADMIN</span>
@@ -152,7 +152,7 @@ export function renderAdminDashboardView(
           </div>
 
           <button id="btn-sidebar-logout" class="btn-sidebar-exit">
-            <span>${icon('LogOut', 15)} Exit Admin Console</span>
+            <span>${icon('LogOut', 14)} Exit Admin Console</span>
           </button>
         </div>
       </aside>

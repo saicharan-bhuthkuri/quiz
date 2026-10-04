@@ -408,3 +408,126 @@ export async function apiGetEventDashboard(eventId: string): Promise<EventDashbo
   return res.json();
 }
 
+/* ==========================================================================
+   UPTIMEROBOT 24/7 MONITORING & LIVE SYNCHRONIZATION API
+   ========================================================================== */
+export interface UptimeRobotMonitorSummary {
+  id: string;
+  name: string;
+  url: string;
+  status: 'UP' | 'DOWN' | 'PAUSED' | 'NOT_CHECKED' | 'SEEMS_DOWN';
+  statusCode: number;
+  interval: number;
+  averageResponseTime?: number;
+}
+
+export interface UptimeRobotData {
+  success: boolean;
+  connected: boolean;
+  configuredKey?: boolean;
+  source: 'uptimerobot_official_api' | 'live_system_probe';
+  message?: string;
+  monitors?: UptimeRobotMonitorSummary[];
+  monitor: {
+    id: string;
+    friendlyName: string;
+    url: string;
+    status: 'UP' | 'DOWN' | 'PAUSED' | 'NOT_CHECKED' | 'SEEMS_DOWN';
+    statusCode: number;
+    interval: number;
+    uptimeDuration: string;
+    lastCheckSecondsAgo: number;
+    ratios: {
+      day1: number;
+      day7: number;
+      day30: number;
+      day365: number;
+      allTime?: number;
+    };
+    mtbf: string;
+    averageResponseTime: number;
+    responseTimes: Array<{
+      time: string;
+      timestamp: number;
+      value: number;
+    }>;
+    heartbeatBars: Array<{
+      index: number;
+      status: 'UP' | 'DOWN' | 'PAUSED';
+      latency: number;
+      timestamp: number;
+      formattedTime?: string;
+      formattedDate?: string;
+    }>;
+    incidentsCount: number;
+    downtimeMinutes: number;
+  };
+}
+
+export interface UptimeRobotConfigInfo {
+  configured: boolean;
+  maskedKey: string | null;
+  monitorId: string | null;
+  monitors?: UptimeRobotMonitorSummary[];
+}
+
+export async function apiGetUptimeRobotMonitor(monitorId?: string): Promise<UptimeRobotData> {
+  const query = monitorId ? `?monitorId=${encodeURIComponent(monitorId)}&t=${Date.now()}` : `?t=${Date.now()}`;
+  const res = await fetch(`${API_BASE}/uptimerobot/monitor${query}`, {
+    cache: 'no-store'
+  });
+  return res.json();
+}
+
+export async function apiGetUptimeRobotConfig(): Promise<UptimeRobotConfigInfo> {
+  const res = await fetch(`${API_BASE}/uptimerobot/config?t=${Date.now()}`, {
+    cache: 'no-store'
+  });
+  return res.json();
+}
+
+export async function apiSaveUptimeRobotConfig(apiKey: string, monitorId?: string): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+  monitorsCount?: number;
+  monitors?: UptimeRobotMonitorSummary[];
+}> {
+  const res = await fetch(`${API_BASE}/uptimerobot/config`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ apiKey, monitorId })
+  });
+  return res.json();
+}
+
+export async function apiPingEndpoint(url?: string): Promise<{
+  success: boolean;
+  latencyMs: number;
+  statusCode: number;
+  statusText?: string;
+  timestamp: string;
+}> {
+  const res = await fetch(`${API_BASE}/uptimerobot/ping`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ url })
+  });
+  return res.json();
+}
+
+export async function apiControlUptimeRobotMonitor(action: 'pause' | 'resume', monitorId?: string): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+  newStatus?: string;
+}> {
+  const res = await fetch(`${API_BASE}/uptimerobot/action`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ action, monitorId })
+  });
+  return res.json();
+}
+
+

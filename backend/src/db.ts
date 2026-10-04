@@ -128,6 +128,14 @@ export async function initDatabase() {
       );
     `);
 
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS system_settings (
+        key TEXT PRIMARY KEY,
+        value TEXT NOT NULL,
+        updated_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     console.log('[Turso DB] Database initialized successfully in Backend (including Events and Real-Time Quiz tables)');
     await seedUsersIfEmpty();
     await seedEventsIfEmpty();
@@ -537,5 +545,34 @@ export async function seedEventsIfEmpty(force: boolean = false) {
   } catch (err) {
     console.error('Failed to seed events:', err);
     return { seeded: false, error: String(err) };
+  }
+}
+
+export async function getSystemSetting(key: string): Promise<string | null> {
+  try {
+    const res = await db.execute({
+      sql: 'SELECT value FROM system_settings WHERE key = ?',
+      args: [key]
+    });
+    if (res.rows.length > 0) {
+      return String(res.rows[0].value);
+    }
+    return null;
+  } catch (err) {
+    console.error(`[DB] Failed to get system setting ${key}:`, err);
+    return null;
+  }
+}
+
+export async function setSystemSetting(key: string, value: string): Promise<boolean> {
+  try {
+    await db.execute({
+      sql: `INSERT OR REPLACE INTO system_settings (key, value, updated_at) VALUES (?, ?, CURRENT_TIMESTAMP);`,
+      args: [key, value]
+    });
+    return true;
+  } catch (err) {
+    console.error(`[DB] Failed to set system setting ${key}:`, err);
+    return false;
   }
 }

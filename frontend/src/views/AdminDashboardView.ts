@@ -33,6 +33,7 @@ import {
 } from '../api/client.ts';
 import { soundEngine } from '../components/AudioEffects.ts';
 import { showToast } from '../components/Toast.ts';
+import { showConfirmDialog } from '../components/ConfirmDialog.ts';
 import { icon } from '../components/Icons.ts';
 import { wsClient } from '../services/wsClient.ts';
 import { getAllUsersFromTurso } from '../db/turso.ts';
@@ -103,12 +104,6 @@ export function renderAdminDashboardView(
             <span class="nav-count-badge" id="badge-admins-count">0</span>
           </button>
 
-          <button class="sidebar-nav-btn" id="tab-btn-uptime-monitor" data-tab="uptime-monitor">
-            <span class="nav-btn-icon">${icon('Radio', 16)}</span>
-            <span class="nav-btn-text">Uptime Monitor</span>
-            <span class="nav-live-pill"><span class="nav-pulse-green"></span>24/7</span>
-          </button>
-
           <!-- Sleek Section Divider -->
           <div class="sidebar-section-divider"></div>
 
@@ -148,6 +143,21 @@ export function renderAdminDashboardView(
           <button class="sidebar-nav-btn" id="tab-btn-event-scoreboard" data-tab="event-scoreboard">
             <span class="nav-btn-icon">${icon('Award', 16)}</span>
             <span class="nav-btn-text">Event Scoreboard</span>
+          </button>
+
+          <!-- Sleek Section Divider -->
+          <div class="sidebar-section-divider"></div>
+
+          <!-- ================= 3. UPTIMEROBOT 24/7 (SYSTEM KEEP-ALIVE MONITOR) ================= -->
+          <div class="sidebar-group-header">
+            <span class="sidebar-group-label">${icon('Radio', 12)} UPTIMEROBOT</span>
+            <span class="sidebar-group-chip uptime-chip">24/7 Live</span>
+          </div>
+
+          <button class="sidebar-nav-btn" id="tab-btn-uptime-monitor" data-tab="uptime-monitor">
+            <span class="nav-btn-icon">${icon('Radio', 16)}</span>
+            <span class="nav-btn-text">UptimeRobot Monitor</span>
+            <span class="nav-live-pill"><span class="nav-pulse-green"></span>24/7</span>
           </button>
         </nav>
 
@@ -2728,7 +2738,15 @@ export function renderAdminDashboardView(
         const name = btn.getAttribute('data-name');
         if (!id) return;
 
-        if (confirm(`Are you sure you want to permanently delete user "${name}" from Turso DB?`)) {
+        const confirmed = await showConfirmDialog({
+          title: 'Delete User Record',
+          message: `Are you sure you want to permanently delete user "${name}" from Turso DB? This action cannot be undone.`,
+          confirmText: 'Delete User',
+          cancelText: 'Keep User',
+          type: 'danger'
+        });
+
+        if (confirmed) {
           soundEngine.playClick();
           btn.disabled = true;
           btn.textContent = 'Deleting...';
@@ -2870,7 +2888,15 @@ export function renderAdminDashboardView(
         const name = btn.getAttribute('data-name');
         if (!id) return;
 
-        if (confirm(`Are you sure you want to revoke admin privileges and delete administrator "${name}"?`)) {
+        const confirmed = await showConfirmDialog({
+          title: 'Revoke Admin Privileges',
+          message: `Are you sure you want to revoke admin privileges and delete administrator "${name}"?`,
+          confirmText: 'Revoke & Delete',
+          cancelText: 'Cancel',
+          type: 'danger'
+        });
+
+        if (confirmed) {
           soundEngine.playClick();
           btn.disabled = true;
           btn.textContent = 'Removing...';
@@ -3021,7 +3047,14 @@ export function renderAdminDashboardView(
     });
 
     modalContent.querySelector('#btn-modal-delete-user')?.addEventListener('click', async () => {
-      if (confirm(`Permanently delete ${user.name} from Turso DB?`)) {
+      const confirmed = await showConfirmDialog({
+        title: 'Delete User Record',
+        message: `Permanently delete "${user.name}" from Turso DB? This action cannot be undone.`,
+        confirmText: 'Delete User',
+        cancelText: 'Cancel',
+        type: 'danger'
+      });
+      if (confirmed) {
         userModal.style.display = 'none';
         try {
           const res = await apiDeleteUser(user.id);
@@ -3339,9 +3372,13 @@ export function renderAdminDashboardView(
       return;
     }
 
-    const confirmed = confirm(
-      `Are you sure you want to permanently delete event:\n"${ev.title}"?\n\nWarning: This will delete all its questions, registrations, and leaderboard records from the database.`
-    );
+    const confirmed = await showConfirmDialog({
+      title: 'Delete Competitive Event',
+      message: `Are you sure you want to permanently delete event:\n"${ev.title}"?\n\nWarning: This will delete all its questions, registrations, and leaderboard records from the database.`,
+      confirmText: 'Delete Event',
+      cancelText: 'Cancel',
+      type: 'danger'
+    });
     if (!confirmed) return;
 
     try {
@@ -3872,7 +3909,14 @@ export function renderAdminDashboardView(
         soundEngine.playClick();
         const id = b.getAttribute('data-id');
         if (!id) return;
-        if (!confirm('Are you sure you want to permanently delete this competitive event?')) return;
+        const confirmed = await showConfirmDialog({
+          title: 'Delete Competitive Event',
+          message: 'Are you sure you want to permanently delete this competitive event? All questions and records will be deleted.',
+          confirmText: 'Delete Event',
+          cancelText: 'Cancel',
+          type: 'danger'
+        });
+        if (!confirmed) return;
         try {
           const res = await apiDeleteEvent(id);
           if (res.success) {
@@ -4385,10 +4429,17 @@ export function renderAdminDashboardView(
       showToast('Advancing question flow...', 'info');
     });
 
-    container.querySelector('#btn-host-end-event')?.addEventListener('click', () => {
+    container.querySelector('#btn-host-end-event')?.addEventListener('click', async () => {
       soundEngine.playClick();
       if (!activeHostEvent) return;
-      if (!confirm('Are you sure you want to end this event and finalize the leaderboard?')) return;
+      const confirmed = await showConfirmDialog({
+        title: 'End Live Event',
+        message: 'Are you sure you want to end this event and finalize the leaderboard?',
+        confirmText: 'End Event Now',
+        cancelText: 'Continue Event',
+        type: 'warning'
+      });
+      if (!confirmed) return;
       wsClient.send('ADMIN_END_EVENT', { eventId: activeHostEvent.id });
       showToast('Event ended! Final leaderboard broadcasted.', 'success');
       hostEventStatus = 'EVENT_ENDED';
@@ -5073,7 +5124,14 @@ export function renderAdminDashboardView(
           const uid = btn.getAttribute('data-uid') || '';
           const uname = btn.getAttribute('data-name') || '';
 
-          if (!confirm(`Are you sure you want to unregister ${uname} from this event?`)) return;
+          const confirmed = await showConfirmDialog({
+            title: 'Unregister Participant',
+            message: `Are you sure you want to unregister "${uname}" from this event?`,
+            confirmText: 'Unregister',
+            cancelText: 'Cancel',
+            type: 'danger'
+          });
+          if (!confirmed) return;
 
           try {
             const res = await apiUnregisterEventParticipant(eid, uid);
@@ -5370,7 +5428,14 @@ export function renderAdminDashboardView(
           soundEngine.playClick();
           const qid = btn.getAttribute('data-qid');
           if (!qid || !qmSelectedEventId) return;
-          if (!confirm('Are you sure you want to delete this question?')) return;
+          const confirmed = await showConfirmDialog({
+            title: 'Delete Question',
+            message: 'Are you sure you want to permanently delete this question? This action cannot be undone.',
+            confirmText: 'Delete Question',
+            cancelText: 'Cancel',
+            type: 'danger'
+          });
+          if (!confirmed) return;
 
           try {
             const delRes = await apiDeleteEventQuestion(qmSelectedEventId, qid);
@@ -5870,9 +5935,16 @@ export function renderAdminDashboardView(
         showToast('Question timer resumed.', 'success');
       });
 
-      container.querySelector('#btn-exam-end-event')?.addEventListener('click', () => {
+      container.querySelector('#btn-exam-end-event')?.addEventListener('click', async () => {
         soundEngine.playClick();
-        if (!confirm('Are you sure you want to end this exam and finalize results?')) return;
+        const confirmed = await showConfirmDialog({
+          title: 'End Exam Session',
+          message: 'Are you sure you want to end this exam and finalize results?',
+          confirmText: 'End Exam Now',
+          cancelText: 'Keep Running',
+          type: 'warning'
+        });
+        if (!confirmed) return;
         wsClient.send('ADMIN_END_EVENT', { eventId: examSelectedEventId });
         showToast('Exam ended! Results finalized.', 'success');
       });

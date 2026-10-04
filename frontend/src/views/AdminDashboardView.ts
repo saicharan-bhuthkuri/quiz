@@ -60,8 +60,8 @@ export function renderAdminDashboardView(
   wsClient.connect();
   wsClient.refreshUser();
 
-  const currentAdminEmail = sessionStorage.getItem('engiverse_admin_email') || 'saicharanbhuthkuri468@gmail.com';
-  const rawAdminName = sessionStorage.getItem('engiverse_admin_name') || 'Sai Charan Bhuthkuri';
+  const currentAdminEmail = sessionStorage.getItem('engiverse_admin_email') || '';
+  const rawAdminName = sessionStorage.getItem('engiverse_admin_name') || 'Administrator';
   const currentAdminName = rawAdminName.replace(/\s*\(Superadmin\)/i, '').trim();
 
   container.innerHTML = `
@@ -2883,7 +2883,7 @@ export function renderAdminDashboardView(
 
     tbody.innerHTML = filtered
       .map(adm => {
-        const isPrimarySuper = adm.email.toLowerCase() === 'saicharanbhuthkuri468@gmail.com';
+        const isPrimarySuper = adm.role === 'SUPERADMIN' || (currentAdminEmail ? adm.email.toLowerCase() === currentAdminEmail.toLowerCase() : false);
         const roleClass = getAdminRoleClass(adm.role);
 
         return `
@@ -4532,7 +4532,7 @@ export function renderAdminDashboardView(
     return (list || []).filter(e => {
       const uid = String(e.userId || '');
       const uname = String(e.userName || '').toLowerCase();
-      if (uid.startsWith('adm_') || uid === 'usr_saicharan_super' || uname.includes('sai charan') || uname.includes('admin')) {
+      if (uid.startsWith('adm_') || uid.includes('super') || uname.includes('admin') || (currentAdminEmail && String(e.userEmail || '').toLowerCase() === currentAdminEmail.toLowerCase())) {
         return false;
       }
       return true;
@@ -4677,7 +4677,7 @@ export function renderAdminDashboardView(
     const isUserAdmin = (u: { email?: string; id?: string; name?: string }) => {
       const email = (u.email || '').toLowerCase().trim();
       const uid = String(u.id || '');
-      return uid.startsWith('adm_') || uid === 'usr_saicharan_super' || email.includes('admin') || email === 'saicharanbhuthkuri468@gmail.com';
+      return uid.startsWith('adm_') || uid.includes('super') || email.includes('admin') || (currentAdminEmail ? email === currentAdminEmail.toLowerCase() : false);
     };
 
     // Populate platform engineers quick-pick (excluding admins)
@@ -5053,7 +5053,7 @@ export function renderAdminDashboardView(
             .filter(p => {
               const uid = String(p.userId || '');
               const email = String(p.userEmail || '').toLowerCase();
-              if (uid.startsWith('adm_') || uid === 'usr_saicharan_super' || email.includes('admin') || email === 'saicharanbhuthkuri468@gmail.com') {
+              if (uid.startsWith('adm_') || uid.includes('super') || email.includes('admin') || (currentAdminEmail ? email === currentAdminEmail.toLowerCase() : false)) {
                 return false;
               }
               return true;
@@ -6053,7 +6053,7 @@ export function renderAdminDashboardView(
       return (list || []).filter(e => {
         const uid = String(e.userId || '');
         const uname = String(e.userName || '').toLowerCase();
-        if (uid.startsWith('adm_') || uid === 'usr_saicharan_super' || uname.includes('sai charan') || uname.includes('admin')) {
+        if (uid.startsWith('adm_') || uid.includes('super') || uname.includes('admin') || (currentAdminEmail && String((e as any).userEmail || '').toLowerCase() === currentAdminEmail.toLowerCase())) {
           return false;
         }
         return true;
@@ -7259,7 +7259,7 @@ export function renderAdminDashboardView(
 
     container.querySelector('#btn-chart-alerts')?.addEventListener('click', () => {
       soundEngine.playClick();
-      showToast('Email alerts are enabled for saicharanbhuthkuri468@gmail.com.', 'info');
+      showToast(`Email alerts are active for ${currentAdminEmail || 'administrators'}.`, 'info');
     });
 
     container.querySelector('#btn-side-ssl-check')?.addEventListener('click', async () => {

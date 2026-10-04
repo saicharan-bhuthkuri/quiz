@@ -55,6 +55,29 @@ export const loginSchema = z.object({
     .max(128, { message: 'Password cannot exceed 128 characters' })
 }).strict();
 
+export const socialAuthSchema = z.object({
+  provider: z.enum(['github', 'google']),
+  name: z.string()
+    .trim()
+    .min(2, { message: 'Name must be at least 2 characters long' })
+    .max(100, { message: 'Name cannot exceed 100 characters' }),
+  email: z.string()
+    .trim()
+    .email({ message: 'Must be a valid email address' })
+    .max(255, { message: 'Email cannot exceed 255 characters' })
+    .toLowerCase(),
+  avatar: z.string()
+    .trim()
+    .max(500, { message: 'Avatar reference cannot exceed 500 characters' })
+    .optional()
+    .default(''),
+  discipline: z.string()
+    .trim()
+    .max(100)
+    .optional()
+    .default('Computer Science')
+}).strict();
+
 // ----------------------------------------------------------------------------
 // 2. Quiz Attempt Schema
 // ----------------------------------------------------------------------------

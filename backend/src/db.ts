@@ -1,10 +1,11 @@
 import { createClient } from '@libsql/client';
 import dotenv from 'dotenv';
 import bcrypt from 'bcryptjs';
+import crypto from 'crypto';
 
 dotenv.config();
 
-const url = process.env.TURSO_DATABASE_URL || 'https://engiverse-rushanth.aws-ap-south-1.turso.io';
+const url = process.env.TURSO_DATABASE_URL || '';
 const authToken = process.env.TURSO_AUTH_TOKEN || '';
 
 export const db = createClient({
@@ -136,7 +137,7 @@ export async function initDatabase() {
       );
     `);
 
-    console.log('[Turso DB] Database initialized successfully in Backend (including Events and Real-Time Quiz tables)');
+    console.log('[Turso DB] Database tables initialized successfully in Backend');
     await seedUsersIfEmpty();
     await seedEventsIfEmpty();
   } catch (error) {
@@ -144,194 +145,112 @@ export async function initDatabase() {
   }
 }
 
-export const INITIAL_SEEDED_USERS = [
-  {
-    id: 'usr_saicharan_super',
-    name: 'Sai Charan Bhuthkuri',
-    email: process.env.ADMIN_EMAIL || 'saicharanbhuthkuri468@gmail.com',
-    mobile: '+91 99999 99999',
-    branch: 'Computer Systems & AI',
-    year: 'Staff Principal',
-    password: process.env.ADMIN_PASSWORD ? bcrypt.hashSync(process.env.ADMIN_PASSWORD, 10) : '',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-    streak: 50,
-    xp: 99999,
-    badge: 'SUPERADMIN • Principal Systems Architect'
-  },
-  {
-    id: 'usr_elena_quantum',
-    name: 'Elena Rostova',
-    email: 'elena.rostova@quantum.eng',
-    mobile: '+1 (555) 438-9201',
-    branch: 'Computer Science (CSE)',
-    year: '4th Year',
-    password: 'QuantumCore#2026',
-    avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-    streak: 42,
-    xp: 48920,
-    badge: 'Grandmaster Engineer'
-  },
-  {
-    id: 'usr_devon_silicon',
-    name: 'Devon Vance',
-    email: 'devon.vance@silicon.io',
-    mobile: '+1 (555) 891-2304',
-    branch: 'Electronics & Communication (ECE)',
-    year: '3rd Year',
-    password: 'Silicon#Gate2026',
-    avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
-    streak: 29,
-    xp: 46150,
-    badge: 'Silicon Architect'
-  },
-  {
-    id: 'usr_aisha_neural',
-    name: 'Aisha Patel',
-    email: 'aisha.patel@neural.tech',
-    mobile: '+91 98201 45672',
-    branch: 'AI & Data Science (AI/DS)',
-    year: 'Graduate',
-    password: 'TensorFlow#2026',
-    avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80',
-    streak: 35,
-    xp: 43800,
-    badge: 'Neural Pioneer'
-  },
-  {
-    id: 'usr_marcus_robot',
-    name: 'Marcus Chen',
-    email: 'marcus.chen@robotics.mit',
-    mobile: '+1 (555) 302-8819',
-    branch: 'Mechanical Engineering (ME)',
-    year: '4th Year',
-    password: 'Kinematics#2026',
-    avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80',
-    streak: 18,
-    xp: 41200,
-    badge: 'Robotics Savant'
-  },
-  {
-    id: 'usr_sofia_cloud',
-    name: 'Sofia Al-Mansoor',
-    email: 'sofia.mansoor@cloud.dev',
-    mobile: '+971 50 123 4567',
-    branch: 'Information Technology (IT)',
-    year: 'Graduate',
-    password: 'Kubernetes#2026',
-    avatar: 'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80',
-    streak: 24,
-    xp: 39950,
-    badge: 'Cloud Principal'
-  },
-  {
-    id: 'usr_liam_aero',
-    name: 'Liam O’Connor',
-    email: 'liam.oc@aerospace.eu',
-    mobile: '+44 7700 900123',
-    branch: 'Aerospace Engineering',
-    year: '2nd Year',
-    password: 'Hypersonic#2026',
-    avatar: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80',
-    streak: 14,
-    xp: 28400,
-    badge: 'Aerodynamic Ace'
-  },
-  {
-    id: 'usr_priya_power',
-    name: 'Priya Sharma',
-    email: 'priya.sharma@renewable.in',
-    mobile: '+91 94451 98765',
-    branch: 'Electrical & Electronics (EEE)',
-    year: '1st Year',
-    password: 'SmartGrid#2026',
-    avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80',
-    streak: 9,
-    xp: 19800,
-    badge: 'Energy Specialist'
-  },
-  {
-    id: 'usr_alex_struct',
-    name: 'Alex Rivera',
-    email: 'alex.rivera@struct.org',
-    mobile: '+1 (555) 773-4412',
-    branch: 'Civil Engineering (CE)',
-    year: '3rd Year',
-    password: 'Autocad#2026',
-    avatar: 'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&q=80',
-    streak: 11,
-    xp: 22100,
-    badge: 'Structural Virtuoso'
-  }
-];
-
 export async function seedUsersIfEmpty(force = false) {
   try {
-    const countRes = await db.execute('SELECT COUNT(*) as c FROM users;');
-    const count = Number(countRes.rows[0]?.c || 0);
+    const adminEmail = (process.env.ADMIN_EMAIL || '').trim().toLowerCase();
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    const adminName = process.env.ADMIN_NAME || 'Super Administrator';
 
-    if (count > 0 && !force) {
-      return { seeded: false, count };
-    }
+    // 1. Ensure master admin is configured in admins and users table
+    if (adminEmail && adminPassword) {
+      const hashedAdminPassword = await bcrypt.hash(adminPassword, 10);
 
-    for (const u of INITIAL_SEEDED_USERS) {
-      const hashedPassword = bcrypt.hashSync(u.password, 10);
       await db.execute({
-        sql: `INSERT OR IGNORE INTO users (id, name, email, mobile, branch, year, password, avatar, streak, xp, badge, created_at)
-              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'));`,
-        args: [u.id, u.name, u.email, u.mobile, u.branch, u.year, hashedPassword, u.avatar, u.streak, u.xp, u.badge]
+        sql: `INSERT OR REPLACE INTO admins (id, name, email, password, role, created_at)
+              VALUES (?, ?, ?, ?, 'SUPERADMIN', datetime('now'));`,
+        args: ['adm_primary_super', adminName, adminEmail, hashedAdminPassword]
+      });
+
+      await db.execute({
+        sql: `INSERT OR REPLACE INTO users (id, name, email, mobile, branch, year, password, avatar, streak, xp, badge, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, 50, 99999, ?, datetime('now'));`,
+        args: [
+          'usr_primary_super',
+          adminName,
+          adminEmail,
+          '+91 99999 99999',
+          'Computer Systems & AI',
+          'Staff Principal',
+          hashedAdminPassword,
+          'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+          'SUPERADMIN • Principal Systems Architect'
+        ]
       });
     }
 
-    // Seed quiz attempts if empty
-    const attCountRes = await db.execute('SELECT COUNT(*) as c FROM quiz_attempts;');
-    const attCount = Number(attCountRes.rows[0]?.c || 0);
-    if (attCount === 0 || force) {
-      const attempts = [
-        { id: 'att_seed_1', user_email: 'elena.rostova@quantum.eng', user_name: 'Elena Rostova', score: 10, total_questions: 10, xp_earned: 1200, accuracy: 100, rank_title: 'Quantum Master' },
-        { id: 'att_seed_2', user_email: 'devon.vance@silicon.io', user_name: 'Devon Vance', score: 9, total_questions: 10, xp_earned: 950, accuracy: 90, rank_title: 'Silicon Grandmaster' },
-        { id: 'att_seed_3', user_email: 'aisha.patel@neural.tech', user_name: 'Aisha Patel', score: 10, total_questions: 10, xp_earned: 1100, accuracy: 100, rank_title: 'Deep Learning Lead' },
-        { id: 'att_seed_4', user_email: 'marcus.chen@robotics.mit', user_name: 'Marcus Chen', score: 8, total_questions: 10, xp_earned: 800, accuracy: 80, rank_title: 'Robotics Specialist' },
-        { id: 'att_seed_5', user_email: 'sofia.mansoor@cloud.dev', user_name: 'Sofia Al-Mansoor', score: 9, total_questions: 10, xp_earned: 900, accuracy: 90, rank_title: 'DevOps Architect' },
-      ];
-      for (const a of attempts) {
-        await db.execute({
-          sql: `INSERT OR IGNORE INTO quiz_attempts (id, user_email, user_name, score, total_questions, xp_earned, accuracy, rank_title, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, datetime('now'));`,
-          args: [a.id, a.user_email, a.user_name, a.score, a.total_questions, a.xp_earned, a.accuracy, a.rank_title]
-        });
-      }
+    const countRes = await db.execute('SELECT COUNT(*) as c FROM users;');
+    const count = Number(countRes.rows[0]?.c || 0);
+
+    // If users already exist and force is false, no need to add demo participants
+    if (count > 1 && !force) {
+      return { seeded: false, count };
     }
 
-    // Seed admins table if empty
-    const adminCountRes = await db.execute('SELECT COUNT(*) as c FROM admins;');
-    const adminCount = Number(adminCountRes.rows[0]?.c || 0);
-    const configuredAdminEmail = (process.env.ADMIN_EMAIL || 'saicharanbhuthkuri468@gmail.com').trim().toLowerCase();
-    const configuredAdminPassword = process.env.ADMIN_PASSWORD;
+    // 2. Generate dynamic starter participants if table only has admin or is empty
+    const disciplines = [
+      { name: 'Computer Science (CSE)', badge: 'Grandmaster Engineer', xp: 48920, streak: 42 },
+      { name: 'Electronics & Communication (ECE)', badge: 'Silicon Architect', xp: 46150, streak: 29 },
+      { name: 'AI & Data Science (AI/DS)', badge: 'Neural Pioneer', xp: 43800, streak: 35 },
+      { name: 'Mechanical Engineering (ME)', badge: 'Robotics Savant', xp: 41200, streak: 18 },
+      { name: 'Information Technology (IT)', badge: 'Cloud Principal', xp: 39950, streak: 24 },
+      { name: 'Aerospace Engineering', badge: 'Aerodynamic Ace', xp: 28400, streak: 14 },
+      { name: 'Electrical & Electronics (EEE)', badge: 'Energy Specialist', xp: 19800, streak: 9 },
+      { name: 'Civil Engineering (CE)', badge: 'Structural Virtuoso', xp: 22100, streak: 11 }
+    ];
 
-    if ((adminCount === 0 || force) && configuredAdminPassword) {
-      const defaultAdmins = [
-        {
-          id: 'adm_saicharan_super',
-          name: 'Sai Charan Bhuthkuri',
-          email: configuredAdminEmail,
-          password: configuredAdminPassword,
-          role: 'SUPERADMIN'
-        }
-      ];
-      for (const a of defaultAdmins) {
-        const hashedAdminPassword = bcrypt.hashSync(a.password, 10);
-        await db.execute({
-          sql: `INSERT OR IGNORE INTO admins (id, name, email, password, role, created_at)
-                VALUES (?, ?, ?, ?, ?, datetime('now'));`,
-          args: [a.id, a.name, a.email, hashedAdminPassword, a.role]
-        });
-      }
+    const starterAvatars = [
+      'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1544005313-94ddf0286df2?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?auto=format&fit=crop&w=120&q=80',
+      'https://images.unsplash.com/photo-1519085360753-af0119f7cbe7?auto=format&fit=crop&w=120&q=80'
+    ];
+
+    const names = [
+      'Elena Rostova',
+      'Devon Vance',
+      'Aisha Patel',
+      'Marcus Chen',
+      'Sofia Al-Mansoor',
+      'Liam O’Connor',
+      'Priya Sharma',
+      'Alex Rivera'
+    ];
+
+    for (let i = 0; i < disciplines.length; i++) {
+      const disc = disciplines[i];
+      const personName = names[i];
+      const handle = personName.toLowerCase().replace(/[^a-z0-9]/g, '.');
+      const email = `${handle}@engineer.engiverse.io`;
+      const id = `usr_demo_${i + 1}`;
+      const randomSecret = await bcrypt.hash(crypto.randomBytes(16).toString('hex'), 10);
+
+      await db.execute({
+        sql: `INSERT OR IGNORE INTO users (id, name, email, mobile, branch, year, password, avatar, streak, xp, badge, created_at)
+              VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'));`,
+        args: [
+          id,
+          personName,
+          email,
+          `+1 (555) 010-${(1000 + i * 111).toString()}`,
+          disc.name,
+          `${(i % 4) + 1}th Year`,
+          randomSecret,
+          starterAvatars[i % starterAvatars.length],
+          disc.streak,
+          disc.xp,
+          disc.badge
+        ]
+      });
     }
 
-    console.log(`[Turso DB] Seeded ${INITIAL_SEEDED_USERS.length} realistic engineers into Turso DB`);
-    return { seeded: true, count: INITIAL_SEEDED_USERS.length };
+    console.log(`[Turso DB] Synchronized dynamic users in Turso DB`);
+    return { seeded: true };
   } catch (err) {
-    console.error('Failed to seed users and admins:', err);
+    console.error('Failed to synchronize users and admins:', err);
     return { seeded: false, error: String(err) };
   }
 }
@@ -345,7 +264,6 @@ export async function seedEventsIfEmpty(force: boolean = false) {
       return { seeded: false, message: 'Events already populated' };
     }
 
-    // Default Event 1: All-India Engineering Grand Championship 2026
     const event1 = {
       id: 'evt_eng_championship_2026',
       title: 'All-India Engineering Grand Championship 2026',
@@ -443,7 +361,6 @@ export async function seedEventsIfEmpty(force: boolean = false) {
       });
     }
 
-    // Default Event 2: National Semiconductor & VLSI Blitz
     const event2 = {
       id: 'evt_silicon_circuits_live',
       title: 'National Semiconductor & VLSI Blitz',
@@ -519,24 +436,7 @@ export async function seedEventsIfEmpty(force: boolean = false) {
       });
     }
 
-    // Seed sample registrations so live events already feel populated
-    const sampleRegistrations = [
-      { id: 'reg_1', event_id: event1.id, user_id: 'usr_elena_quantum', user_name: 'Elena Rostova', user_email: 'elena.rostova@quantum.eng' },
-      { id: 'reg_2', event_id: event1.id, user_id: 'usr_devon_silicon', user_name: 'Devon Vance', user_email: 'devon.vance@silicon.io' },
-      { id: 'reg_3', event_id: event1.id, user_id: 'usr_aisha_neural', user_name: 'Aisha Patel', user_email: 'aisha.patel@neural.tech' },
-      { id: 'reg_4', event_id: event2.id, user_id: 'usr_devon_silicon', user_name: 'Devon Vance', user_email: 'devon.vance@silicon.io' },
-      { id: 'reg_5', event_id: event2.id, user_id: 'usr_marcus_robot', user_name: 'Marcus Chen', user_email: 'marcus.chen@robotics.mit' }
-    ];
-
-    for (const r of sampleRegistrations) {
-      await db.execute({
-        sql: `INSERT OR IGNORE INTO event_registrations (id, event_id, user_id, user_name, user_email, registered_at)
-              VALUES (?, ?, ?, ?, ?, datetime('now'));`,
-        args: [r.id, r.event_id, r.user_id, r.user_name, r.user_email]
-      });
-    }
-
-    console.log('[Turso DB] Seeded 2 Real-Time Events with Questions and Registrations');
+    console.log('[Turso DB] Seeded Real-Time Events with Questions');
     return { seeded: true, events: 2 };
   } catch (err) {
     console.error('Failed to seed events:', err);

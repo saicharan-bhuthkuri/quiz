@@ -7,7 +7,12 @@ import { showToast } from '../components/Toast.ts';
 import { launchConfetti } from '../components/Confetti.ts';
 import { getLoggedInUser, logoutUser } from '../auth.ts';
 import { icon } from '../components/Icons.ts';
-import { apiGetUptimeRobotMonitor } from '../api/client.ts';
+import {
+  apiGetUptimeRobotMonitor,
+  apiGetPlatformStats,
+  apiGetTestimonials,
+  apiGetPricingPlans
+} from '../api/client.ts';
 
 export function renderLandingView(
   container: HTMLElement,
@@ -183,20 +188,20 @@ export function renderLandingView(
 
               <div class="hero-active-users">
                 <span class="live-pulse-dot"></span>
-                <span><strong>4,180 engineers</strong> solving challenges right now</span>
+                <span><strong id="hero-active-engineers">4,180 engineers</strong> solving challenges right now</span>
               </div>
 
               <div class="hero-metrics-row">
                 <div class="hero-metric-item">
-                  <span class="metric-number">500+</span>
+                  <span class="metric-number" id="metric-challenges-count">500+</span>
                   <span class="metric-label">Engineering Challenges</span>
                 </div>
                 <div class="hero-metric-item">
-                  <span class="metric-number">98.4%</span>
+                  <span class="metric-number" id="metric-mastery-rate">98.4%</span>
                   <span class="metric-label">Concept Mastery Rate</span>
                 </div>
                 <div class="hero-metric-item">
-                  <span class="metric-number">48k+</span>
+                  <span class="metric-number" id="metric-competitors-count">48k+</span>
                   <span class="metric-label">Global Competitors</span>
                 </div>
               </div>
@@ -542,6 +547,22 @@ export function renderLandingView(
   // 4. Initialize Leaderboard
   new LeaderboardSection('leaderboard-container');
 
+  // 4b. Fetch Live Dynamic Platform Stats
+  apiGetPlatformStats()
+    .then(res => {
+      if (res && res.success && res.stats) {
+        const elActive = container.querySelector('#hero-active-engineers');
+        const elChallenges = container.querySelector('#metric-challenges-count');
+        const elMastery = container.querySelector('#metric-mastery-rate');
+        const elCompetitors = container.querySelector('#metric-competitors-count');
+        if (elActive) elActive.textContent = `${res.stats.activeEngineers.toLocaleString()} engineers`;
+        if (elChallenges) elChallenges.textContent = `${res.stats.challengesCount}+`;
+        if (elMastery) elMastery.textContent = `${res.stats.masteryRate}%`;
+        if (elCompetitors) elCompetitors.textContent = `${Math.round(res.stats.globalCompetitors / 1000)}k+`;
+      }
+    })
+    .catch(err => console.warn('Dynamic platform stats fetch:', err));
+
   // 5. Render Testimonials
   renderTestimonials(container);
 
@@ -565,23 +586,36 @@ function renderTestimonials(container: HTMLElement): void {
   const grid = container.querySelector('#testimonials-grid');
   if (!grid) return;
 
-  grid.innerHTML = testimonials
-    .map(
-      t => `
-      <div class="testimonial-card">
-        <div class="testimonial-stars">${Array(5).fill(icon('Star', { size: 15, fill: '#f59e0b', color: '#f59e0b' })).join('')}</div>
-        <p class="testimonial-quote">"${escapeHtml(t.quote)}"</p>
-        <div class="testimonial-author">
-          <img src="${t.avatar}" alt="${t.name}" class="author-avatar" />
-          <div class="author-info">
-            <span class="author-name">${t.name}</span>
-            <span class="author-role">${t.role} • ${t.company}</span>
+  function draw(items: any[]) {
+    if (!grid) return;
+    grid.innerHTML = items
+      .map(
+        t => `
+        <div class="testimonial-card">
+          <div class="testimonial-stars">${Array(5).fill(icon('Star', { size: 15, fill: '#f59e0b', color: '#f59e0b' })).join('')}</div>
+          <p class="testimonial-quote">"${escapeHtml(t.quote)}"</p>
+          <div class="testimonial-author">
+            <img src="${t.avatar}" alt="${t.name}" class="author-avatar" />
+            <div class="author-info">
+              <span class="author-name">${t.name}</span>
+              <span class="author-role">${t.role} • ${t.company}</span>
+            </div>
           </div>
         </div>
-      </div>
-    `
-    )
-    .join('');
+      `
+      )
+      .join('');
+  }
+
+  // Initial render with fallback, then hydrate from live API
+  draw(testimonials);
+  apiGetTestimonials()
+    .then(res => {
+      if (res && res.success && Array.isArray(res.testimonials)) {
+        draw(res.testimonials);
+      }
+    })
+    .catch(err => console.warn('Dynamic testimonials fetch:', err));
 }
 
 function setupPricing(container: HTMLElement): void {
@@ -590,10 +624,11 @@ function setupPricing(container: HTMLElement): void {
   if (!pricingGrid) return;
 
   let isAnnual = false;
+  let activePlans = pricingPlans;
 
   function renderCards(): void {
     if (!pricingGrid) return;
-    pricingGrid.innerHTML = pricingPlans
+    pricingGrid.innerHTML = activePlans
       .map(plan => {
         const price = isAnnual ? plan.priceAnnual : plan.priceMonthly;
         return `
@@ -611,7 +646,7 @@ function setupPricing(container: HTMLElement): void {
           <ul class="plan-features-list">
             ${plan.features
               .map(
-                f => `
+                (f: string) => `
               <li class="feature-check-item">
                 <span class="check-icon">${icon('Check', 14)}</span>
                 <span>${f}</span>
@@ -633,13 +668,21 @@ function setupPricing(container: HTMLElement): void {
       btn.addEventListener('click', () => {
         soundEngine.playClick();
         const planId = btn.getAttribute('data-plan');
-        launchConfetti();
-        showToast(`Selected ${planId?.toUpperCase()} tier pass! Welcome to Engiverse.`, 'success');
+        showToast(`Selected ${planId?.toUpperCase()} Plan. Proceeding to checkout...`, 'info');
       });
     });
   }
 
   renderCards();
+
+  apiGetPricingPlans()
+    .then(res => {
+      if (res && res.success && Array.isArray(res.plans)) {
+        activePlans = res.plans;
+        renderCards();
+      }
+    })
+    .catch(err => console.warn('Dynamic pricing fetch:', err));
 
   if (switchEl) {
     const handleToggle = () => {
@@ -651,10 +694,10 @@ function setupPricing(container: HTMLElement): void {
     };
 
     switchEl.addEventListener('click', handleToggle);
-    switchEl.addEventListener('keydown', (e) => {
-      const event = e as KeyboardEvent;
-      if (event.key === 'Enter' || event.key === ' ') {
-        event.preventDefault();
+    switchEl.addEventListener('keydown', (e: Event) => {
+      const ke = e as KeyboardEvent;
+      if (ke.key === 'Enter' || ke.key === ' ') {
+        ke.preventDefault();
         handleToggle();
       }
     });

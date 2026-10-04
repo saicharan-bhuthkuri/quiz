@@ -6,6 +6,7 @@ import { showToast } from './Toast.ts';
 import { getLoggedInUser, saveUserSession } from '../auth.ts';
 import { recordQuizAttemptToTurso } from '../db/turso.ts';
 import { icon } from './Icons.ts';
+import { apiGetDiagnosticQuestions } from '../api/client.ts';
 
 export class InteractiveHeroQuiz {
   private container: HTMLElement;
@@ -24,6 +25,15 @@ export class InteractiveHeroQuiz {
     if (!el) throw new Error(`Container #${containerId} not found`);
     this.container = el;
     this.render();
+
+    apiGetDiagnosticQuestions()
+      .then(res => {
+        if (res && res.success && Array.isArray(res.questions) && res.questions.length > 0) {
+          this.questions = res.questions;
+          this.render();
+        }
+      })
+      .catch(err => console.warn('Dynamic diagnostic questions fetch error:', err));
   }
 
   private startTimer(): void {

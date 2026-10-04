@@ -1,7 +1,7 @@
 import { soundEngine } from '../components/AudioEffects.ts';
 import { launchConfetti } from '../components/Confetti.ts';
 import { showToast } from '../components/Toast.ts';
-import { saveUserSession, EngiverseUser } from '../auth.ts';
+import { saveUserSession } from '../auth.ts';
 import { loginUserFromTurso } from '../db/turso.ts';
 import { icon } from '../components/Icons.ts';
 
@@ -180,11 +180,12 @@ export function renderLoginView(
         saveUserSession(dbResult.user);
 
         // If this user is an administrator or superadmin, activate admin session as well
-        if (
-          dbResult.user.email.toLowerCase() === 'saicharanbhuthkuri468@gmail.com' ||
-          dbResult.user.badge.toLowerCase().includes('admin') ||
-          dbResult.user.badge.toLowerCase().includes('superadmin')
-        ) {
+        const isSuperadmin = (dbResult.user.badge && (
+          dbResult.user.badge.toLowerCase().includes('superadmin') ||
+          dbResult.user.badge.toLowerCase().includes('admin')
+        )) || (dbResult.user as any).role === 'SUPERADMIN';
+
+        if (isSuperadmin) {
           sessionStorage.setItem('engiverse_admin_token', 'adm_jwt_' + btoa(Date.now().toString()));
           sessionStorage.setItem('engiverse_admin_email', dbResult.user.email);
           sessionStorage.setItem('engiverse_admin_name', dbResult.user.name);
@@ -192,33 +193,8 @@ export function renderLoginView(
 
         soundEngine.playCorrect();
         launchConfetti();
-        const roleGreeting = dbResult.user.email.toLowerCase() === 'saicharanbhuthkuri468@gmail.com'
-          ? 'Superadmin Access Confirmed.'
-          : 'Authenticated via Turso DB.';
+        const roleGreeting = isSuperadmin ? 'Superadmin Access Confirmed.' : 'Authenticated via Turso Cloud.';
         showToast(`Welcome back, ${dbResult.user.name}! ${roleGreeting}`, 'success');
-        setTimeout(() => onNavigate('portal'), 850);
-        return;
-      }
-
-      // 2. Fallback check for demo account
-      if (email.includes('elena') || email.includes('demo')) {
-        const demoUser: EngiverseUser = {
-          name: 'Elena Rostova',
-          email: 'elena.rostova@quantum.eng',
-          mobile: '+1 (555) 019-4820',
-          branch: 'Quantum & Systems',
-          year: 'Alumni',
-          discipline: 'Quantum & Systems',
-          avatar: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
-          streak: 42,
-          xp: 48920,
-          badge: 'Grandmaster Engineer',
-          joinedAt: '2024-03-12'
-        };
-        saveUserSession(demoUser);
-        soundEngine.playCorrect();
-        launchConfetti();
-        showToast(`Welcome back, Elena! Demo session loaded.`, 'success');
         setTimeout(() => onNavigate('portal'), 850);
         return;
       }

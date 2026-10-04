@@ -18,9 +18,12 @@ export function renderParticipantPortalView(
     badge: 'Engineer'
   };
 
-  const isSuperadmin = user.email.toLowerCase() === 'saicharanbhuthkuri468@gmail.com' ||
+  const isSuperadmin = Boolean(
+    (user as any).role === 'SUPERADMIN' ||
     user.badge?.toLowerCase().includes('superadmin') ||
-    user.badge?.toLowerCase().includes('admin');
+    user.badge?.toLowerCase().includes('admin') ||
+    sessionStorage.getItem('engiverse_admin_token')
+  );
 
   const initialLetter = (user.name ? user.name.trim().charAt(0) : 'E').toUpperCase();
 

@@ -3,33 +3,52 @@ import { DomainCategory } from '../types/index.ts';
 import { modalManager } from './Modal.ts';
 import { soundEngine } from './AudioEffects.ts';
 import { icon } from './Icons.ts';
+import { apiGetDomains } from '../api/client.ts';
 
 export class DomainExplorer {
   private container: HTMLElement;
   private currentFilter: string = 'all';
+  private domains: DomainCategory[] = domainCategories;
 
   constructor(containerId: string) {
     const el = document.getElementById(containerId);
     if (!el) throw new Error(`Container #${containerId} not found`);
     this.container = el;
     this.render();
+
+    apiGetDomains()
+      .then(res => {
+        if (res && res.success && Array.isArray(res.domains) && res.domains.length > 0) {
+          // Merge dynamic counts with sample questions
+          this.domains = res.domains.map((d: any) => {
+            const fallback = domainCategories.find(dc => dc.id === d.id);
+            return {
+              ...fallback,
+              ...d,
+              sampleQuestion: fallback?.sampleQuestion || d.sampleQuestion
+            };
+          });
+          this.render();
+        }
+      })
+      .catch(err => console.warn('Dynamic domains fetch error:', err));
   }
 
   private filterDomains(category: string): DomainCategory[] {
-    if (category === 'all') return domainCategories;
+    if (category === 'all') return this.domains;
     if (category === 'software') {
-      return domainCategories.filter(d => ['computer-science', 'cloud-devops'].includes(d.id));
+      return this.domains.filter(d => ['computer-science', 'cloud-devops'].includes(d.id));
     }
     if (category === 'ai') {
-      return domainCategories.filter(d => d.id === 'ai-machine-learning');
+      return this.domains.filter(d => d.id === 'ai-machine-learning');
     }
     if (category === 'hardware') {
-      return domainCategories.filter(d => ['electrical-embedded', 'robotics-mechatronics'].includes(d.id));
+      return this.domains.filter(d => ['electrical-embedded', 'robotics-mechatronics'].includes(d.id));
     }
     if (category === 'frontier') {
-      return domainCategories.filter(d => ['quantum-computing'].includes(d.id));
+      return this.domains.filter(d => ['quantum-computing'].includes(d.id));
     }
-    return domainCategories;
+    return this.domains;
   }
 
   public render(): void {

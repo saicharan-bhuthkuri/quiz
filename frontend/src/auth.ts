@@ -5,6 +5,7 @@ import './styles/auth.css';
 import { soundEngine } from './components/AudioEffects.ts';
 import { launchConfetti } from './components/Confetti.ts';
 import { showToast } from './components/Toast.ts';
+import { apiSocialLogin } from './api/client.ts';
 
 export interface EngiverseUser {
   id?: string;
@@ -283,55 +284,67 @@ function setupLoginPage(): void {
 }
 
 /* ==========================================================================
-   SOCIAL AUTH BUTTONS (MOCK FAST LOGIN)
+   SOCIAL AUTH BUTTONS (DYNAMIC TURSO DB LOGIN)
    ========================================================================== */
 function setupSocialAuthButtons(): void {
   const githubBtns = document.querySelectorAll('.btn-auth-github');
   const googleBtns = document.querySelectorAll('.btn-auth-google');
 
   githubBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       soundEngine.playClick();
-      const mockUser: EngiverseUser = {
-        name: 'Alex Rivera (GitHub)',
-        email: 'alex.rivera@dev.io',
-        discipline: 'Computer Science',
-        avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80',
-        streak: 12,
-        xp: 3420,
-        badge: 'Systems Specialist',
-        joinedAt: '2025-08-15'
-      };
-      saveUserSession(mockUser);
-      soundEngine.playCorrect();
-      launchConfetti();
-      showToast('Authenticated via GitHub! Redirecting to Engiverse...', 'success');
-      setTimeout(() => {
-        window.location.href = 'index.html#hero-quiz-container';
-      }, 1000);
+      try {
+        const res = await apiSocialLogin({
+          provider: 'github',
+          name: 'Alex Rivera (GitHub)',
+          email: 'alex.rivera@dev.io',
+          discipline: 'Computer Science',
+          avatar: 'https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?auto=format&fit=crop&w=120&q=80'
+        });
+
+        if (res && res.success && res.user) {
+          saveUserSession(res.user);
+          soundEngine.playCorrect();
+          launchConfetti();
+          showToast('Authenticated via GitHub! Redirecting to Engiverse...', 'success');
+          setTimeout(() => {
+            window.location.href = 'index.html#hero-quiz-container';
+          }, 1000);
+        } else {
+          showToast(res?.error || 'GitHub authentication failed', 'warn');
+        }
+      } catch (err: any) {
+        showToast('Authentication network error. Please try again.', 'warn');
+      }
     });
   });
 
   googleBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
+    btn.addEventListener('click', async () => {
       soundEngine.playClick();
-      const mockUser: EngiverseUser = {
-        name: 'Dr. Sarah Chen (Google)',
-        email: 'sarah.chen@ai-research.org',
-        discipline: 'AI & Deep Learning',
-        avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80',
-        streak: 19,
-        xp: 6850,
-        badge: 'Neural Architect',
-        joinedAt: '2025-05-20'
-      };
-      saveUserSession(mockUser);
-      soundEngine.playCorrect();
-      launchConfetti();
-      showToast('Authenticated via Google! Redirecting to Engiverse...', 'success');
-      setTimeout(() => {
-        window.location.href = 'index.html#hero-quiz-container';
-      }, 1000);
+      try {
+        const res = await apiSocialLogin({
+          provider: 'google',
+          name: 'Dr. Sarah Chen (Google)',
+          email: 'sarah.chen@ai-research.org',
+          discipline: 'AI & Deep Learning',
+          avatar: 'https://images.unsplash.com/photo-1517841905240-472988babdf9?auto=format&fit=crop&w=120&q=80'
+        });
+
+        if (res && res.success && res.user) {
+          saveUserSession(res.user);
+          soundEngine.playCorrect();
+          launchConfetti();
+          showToast('Authenticated via Google! Redirecting to Engiverse...', 'success');
+          setTimeout(() => {
+            window.location.href = 'index.html#hero-quiz-container';
+          }, 1000);
+        } else {
+          showToast(res?.error || 'Google authentication failed', 'warn');
+        }
+      } catch (err: any) {
+        showToast('Authentication network error. Please try again.', 'warn');
+      }
     });
   });
 }

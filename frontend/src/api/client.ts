@@ -535,5 +535,94 @@ export async function apiGetUsers(): Promise<AdminUserRecord[]> {
   return res.success && Array.isArray(res.users) ? res.users : [];
 }
 
+export async function apiGetLeaderboard(period: string = 'weekly'): Promise<{
+  success: boolean;
+  period: string;
+  entries: any[];
+  liveFeed?: Array<{
+    id: string;
+    userName: string;
+    userAvatar: string;
+    action: string;
+    domainBadge: string;
+    pointsEarned: number;
+    timestamp: string;
+  }>;
+}> {
+  const res = await fetch(`${API_BASE}/leaderboard?period=${encodeURIComponent(period)}&t=${Date.now()}`);
+  return res.json();
+}
+
+export async function apiGetPlatformStats(): Promise<{
+  success: boolean;
+  stats: {
+    totalUsers: number;
+    totalAttempts: number;
+    activeEngineers: number;
+    challengesCount: number;
+    masteryRate: number;
+    globalCompetitors: number;
+  };
+}> {
+  const res = await fetch(`${API_BASE}/stats/platform?t=${Date.now()}`);
+  return res.json();
+}
+
+export async function apiGetDiagnosticQuestions(): Promise<{
+  success: boolean;
+  questions: any[];
+}> {
+  const res = await fetch(`${API_BASE}/quiz/diagnostic?t=${Date.now()}`);
+  return res.json();
+}
+
+export async function apiSocialLogin(payload: {
+  provider: 'github' | 'google';
+  name: string;
+  email: string;
+  avatar?: string;
+  discipline?: string;
+}): Promise<{ success: boolean; user?: any; error?: string }> {
+  const res = await fetch(`${API_BASE}/auth/social`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(payload)
+  });
+  return res.json();
+}
+
+export async function apiGetDailyQuizzes(): Promise<{
+  success: boolean;
+  categories: any[];
+}> {
+  const res = await fetch(`${API_BASE}/quiz/daily?t=${Date.now()}`);
+  return res.json();
+}
+
+export async function apiGetDomains(): Promise<{
+  success: boolean;
+  domains: any[];
+}> {
+  const res = await fetch(`${API_BASE}/domains?t=${Date.now()}`);
+  return res.json();
+}
+
+export async function apiGetTestimonials(): Promise<{
+  success: boolean;
+  testimonials: any[];
+}> {
+  const res = await fetch(`${API_BASE}/testimonials?t=${Date.now()}`);
+  return res.json();
+}
+
+export async function apiGetPricingPlans(): Promise<{
+  success: boolean;
+  plans: any[];
+}> {
+  const res = await fetch(`${API_BASE}/pricing?t=${Date.now()}`);
+  return res.json();
+}
+
+
 
 

@@ -1,7 +1,7 @@
 import { icon } from '../components/Icons.ts';
 import { soundEngine } from '../components/AudioEffects.ts';
 import { getLoggedInUser } from '../auth.ts';
-import { apiSubmitDailyQuiz } from '../api/client.ts';
+import { apiSubmitDailyQuiz, apiGetDailyQuizzes } from '../api/client.ts';
 import { launchConfetti } from '../components/Confetti.ts';
 
 interface DailyQuizCategory {
@@ -214,6 +214,19 @@ export function renderDailyQuizView(
   let timerInterval: ReturnType<typeof setInterval> | null = null;
   let remainingSeconds = 45;
 
+  let categories: DailyQuizCategory[] = DAILY_QUIZZES;
+
+  apiGetDailyQuizzes()
+    .then(res => {
+      if (res && res.success && Array.isArray(res.categories) && res.categories.length > 0) {
+        categories = res.categories;
+        if (!activeCategory) {
+          renderCategorySelector();
+        }
+      }
+    })
+    .catch(err => console.warn('Dynamic daily quizzes fetch:', err));
+
   function renderCategorySelector() {
     container.innerHTML = `
       <div class="portal-viewport">
@@ -253,7 +266,7 @@ export function renderDailyQuizView(
           </div>
 
           <div class="daily-categories-grid">
-            ${DAILY_QUIZZES.map((cat, i) => `
+            ${categories.map((cat, i) => `
               <div class="daily-cat-card" data-index="${i}">
                 <div class="cat-card-header">
                   <div class="cat-icon-badge" style="background: ${cat.accent}15; color: ${cat.accent};">
@@ -288,14 +301,14 @@ export function renderDailyQuizView(
       btn.addEventListener('click', (e) => {
         e.stopPropagation();
         const idx = Number(btn.getAttribute('data-index'));
-        startDailyQuiz(DAILY_QUIZZES[idx]);
+        startDailyQuiz(categories[idx]);
       });
     });
 
     container.querySelectorAll('.daily-cat-card').forEach(card => {
       card.addEventListener('click', () => {
         const idx = Number(card.getAttribute('data-index'));
-        startDailyQuiz(DAILY_QUIZZES[idx]);
+        startDailyQuiz(categories[idx]);
       });
     });
   }

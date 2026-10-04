@@ -41,7 +41,7 @@ export function renderAdminLoginView(
               <label class="form-label" for="admin-email">Admin Email</label>
               <div class="input-wrapper">
                 <span class="input-icon">${icon('Shield', 16)}</span>
-                <input type="email" id="admin-email" class="auth-input" placeholder="saicharanbhuthkuri468@gmail.com" required />
+                <input type="email" id="admin-email" class="auth-input" placeholder="Enter authorized admin email" required />
               </div>
             </div>
 
@@ -59,17 +59,6 @@ export function renderAdminLoginView(
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="5 3 19 12 5 21 5 3"/></svg>
             </button>
           </form>
-
-          <!-- Administrator Access Notice -->
-          <div class="demo-account-box" style="background: #f8fafc; border-color: #e2e8f0;">
-            <div class="demo-account-info">
-              <span class="demo-account-title" style="color: #334155;">${icon('ShieldCheck', 14)} Protected Admin Portal</span>
-              <span class="demo-account-creds" style="color: #64748b;">Superadmin: saicharanbhuthkuri468@gmail.com</span>
-            </div>
-            <button type="button" id="btn-fill-admin-creds" class="btn-demo-fill" style="background: #0284c7;">
-              Select Email
-            </button>
-          </div>
         </div>
       </main>
 
@@ -85,7 +74,6 @@ export function renderAdminLoginView(
   const emailInput = container.querySelector<HTMLInputElement>('#admin-email');
   const pwdInput = container.querySelector<HTMLInputElement>('#admin-pwd');
   const toggleBtn = container.querySelector<HTMLButtonElement>('#toggle-admin-pwd');
-  const autoFillBtn = container.querySelector<HTMLButtonElement>('#btn-fill-admin-creds');
   const form = container.querySelector<HTMLFormElement>('#admin-login-form');
   const submitBtn = container.querySelector<HTMLButtonElement>('#btn-submit-admin-login');
 
@@ -107,15 +95,6 @@ export function renderAdminLoginView(
       toggleBtn.textContent = isPwd ? 'Hide' : 'Show';
     });
   }
-
-  autoFillBtn?.addEventListener('click', () => {
-    soundEngine.playClick();
-    if (emailInput && pwdInput) {
-      emailInput.value = 'saicharanbhuthkuri468@gmail.com';
-      pwdInput.focus();
-      showToast('Admin email set. Please enter your password to authenticate.', 'info');
-    }
-  });
 
   form?.addEventListener('submit', async (e) => {
     e.preventDefault();

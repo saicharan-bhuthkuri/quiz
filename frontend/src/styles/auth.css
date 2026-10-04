@@ -553,11 +553,17 @@
   }
   .auth-main-container {
     padding: 1rem 0.75rem 3rem 0.75rem !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   .auth-card-single,
   .auth-form-panel {
     padding: 1.5rem 1.15rem !important;
     border-radius: var(--radius-lg) !important;
+    width: 100% !important;
+    max-width: 100% !important;
+    box-sizing: border-box !important;
   }
   .auth-form-title {
     font-size: 1.45rem !important;
@@ -565,4 +571,53 @@
   .auth-form-subtitle {
     font-size: 0.85rem !important;
   }
+  .discipline-selector {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: 0.5rem !important;
+  }
 }
+
+@media (max-width: 480px) {
+  .auth-nav {
+    padding-left: 0.5rem !important;
+    padding-right: 0.5rem !important;
+  }
+  .auth-nav-actions {
+    gap: 0.35rem !important;
+  }
+  .btn-auth-back,
+  .btn-auth-toggle {
+    padding: 0.35rem 0.65rem !important;
+    font-size: 0.76rem !important;
+  }
+  .auth-card-single,
+  .auth-form-panel {
+    padding: 1.25rem 0.85rem !important;
+  }
+  .auth-form-title {
+    font-size: 1.3rem !important;
+  }
+  .social-auth-grid {
+    grid-template-columns: 1fr !important;
+    gap: 0.5rem !important;
+  }
+  .discipline-selector {
+    grid-template-columns: 1fr !important;
+    gap: 0.45rem !important;
+  }
+  .discipline-pill {
+    padding: 0.6rem 0.75rem !important;
+    font-size: 0.8rem !important;
+  }
+  .auth-submit-btn,
+  .btn-primary.btn-submit {
+    width: 100% !important;
+    padding: 0.8rem 1rem !important;
+    font-size: 0.92rem !important;
+  }
+  .auth-simple-footer {
+    padding: 1rem 0.75rem !important;
+    font-size: 0.78rem !important;
+  }
+}
+

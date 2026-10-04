@@ -1004,7 +1004,7 @@ export function renderAdminDashboardView(
                   <span style="color: #7c3aed;">${icon('Sliders', 18)}</span>
                   Event Operations Modules
                 </h3>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <div class="edash-modules-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                   <button id="edash-goto-register" class="edash-module-card" style="background: #f8fafc; border: 1px solid var(--border-color); border-radius: var(--radius-md); padding: 1rem; text-align: left; cursor: pointer; transition: all 0.2s ease;">
                     <div style="color: #2563eb; margin-bottom: 0.5rem;">${icon('UserPlus', 20)}</div>
                     <div style="font-weight: 800; font-size: 0.92rem; color: var(--text-main);">Event Register</div>
@@ -1181,7 +1181,7 @@ export function renderAdminDashboardView(
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: minmax(320px, 580px) 1fr; gap: 1.5rem; align-items: start;">
+            <div class="admin-create-event-grid" style="display: grid; grid-template-columns: minmax(320px, 580px) 1fr; gap: 1.5rem; align-items: start;">
               <!-- Add Event Card -->
               <div class="admin-card" style="padding: 2rem; border-radius: var(--radius-xl); background: #ffffff; border: 1.5px solid var(--border-card);">
                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem;">
@@ -1209,7 +1209,7 @@ export function renderAdminDashboardView(
                     </div>
                   </div>
 
-                  <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
+                  <div class="admin-form-row-2col" style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem;">
                     <div class="form-group">
                       <label class="form-label" for="page-event-domain">Engineering Domain</label>
                       <div class="input-wrapper">
@@ -1379,7 +1379,7 @@ export function renderAdminDashboardView(
             </div>
 
             <!-- Dual Columns: Quick Register User + Batch Platform Engineers -->
-            <div style="display: grid; grid-template-columns: 360px 1fr; gap: 1.5rem; align-items: start;">
+            <div class="admin-reg-dual-grid" style="display: grid; grid-template-columns: 360px 1fr; gap: 1.5rem; align-items: start;">
               <!-- Left: Direct Register User Form -->
               <div class="admin-card" style="padding: 1.75rem; border-radius: var(--radius-xl); background: #ffffff; border: 1.5px solid var(--border-card);">
                 <div style="display: flex; align-items: center; gap: 0.5rem; margin-bottom: 1.25rem;">
@@ -1944,7 +1944,7 @@ export function renderAdminDashboardView(
                   <textarea id="new-q-text" class="auth-input" rows="3" placeholder="Enter problem statement..." required style="resize: vertical; min-height: 75px; font-family: inherit; font-size: 0.92rem;"></textarea>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1.15rem;">
+                <div class="modal-options-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.85rem; margin-bottom: 1.15rem;">
                   <div class="form-group">
                     <label class="form-label" for="new-q-opt-0" style="font-weight: 700; color: #4f46e5;">Option A</label>
                     <input type="text" id="new-q-opt-0" class="auth-input" placeholder="Option A choice" required />
@@ -1963,7 +1963,7 @@ export function renderAdminDashboardView(
                   </div>
                 </div>
 
-                <div style="display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 0.85rem; margin-bottom: 1.15rem;">
+                <div class="modal-q-settings-grid-3" style="display: grid; grid-template-columns: 1.35fr 1fr 1fr; gap: 0.85rem; margin-bottom: 1.15rem;">
                   <div class="form-group">
                     <label class="form-label" for="new-q-correct" style="font-weight: 700; color: #16a34a;">Correct Option</label>
                     <select id="new-q-correct" class="auth-input" style="font-weight: 600;">
@@ -2078,7 +2078,7 @@ export function renderAdminDashboardView(
               <input type="text" id="edit-q-text" class="auth-input" placeholder="Question statement..." required />
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+            <div class="modal-options-grid-2" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
               <div>
                 <label class="form-label">Option A</label>
                 <input type="text" id="edit-q-opt-0" class="auth-input" placeholder="Option A" required />
@@ -2097,7 +2097,7 @@ export function renderAdminDashboardView(
               </div>
             </div>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
+            <div class="modal-q-settings-grid-3" style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 0.75rem; margin-bottom: 0.85rem;">
               <div>
                 <label class="form-label">Correct Option</label>
                 <select id="edit-q-correct" class="auth-input">
@@ -5875,7 +5875,7 @@ export function renderAdminDashboardView(
         </div>
 
         <!-- 2-Column Grid: Question Stage & Live Log -->
-        <div style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.5rem; align-items: start;">
+        <div class="exam-live-stage-grid" style="display: grid; grid-template-columns: 1.4fr 1fr; gap: 1.5rem; align-items: start;">
           <!-- Left: Live Question Stage & Synchronized Countdown -->
           <div class="admin-card" style="padding: 1.75rem; border-radius: var(--radius-xl); background: #ffffff; border: 1.5px solid var(--border-card);">
             <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: 1.25rem;">
@@ -5906,7 +5906,7 @@ export function renderAdminDashboardView(
                   ${escapeHtml(examCurrentQuestion.questionText)}
                 </h3>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+                <div class="exam-q-options-grid" style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                   ${examCurrentQuestion.options.map((opt, oIdx) => {
         const isCorrect = oIdx === (examCurrentQuestion?.correctOption ?? 0);
         return `

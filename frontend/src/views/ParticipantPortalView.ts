@@ -18,11 +18,10 @@ export function renderParticipantPortalView(
     badge: 'Engineer'
   };
 
-  const isSuperadmin = Boolean(
-    (user as any).role === 'SUPERADMIN' ||
-    user.badge?.toLowerCase().includes('superadmin') ||
-    user.badge?.toLowerCase().includes('admin') ||
-    sessionStorage.getItem('engiverse_admin_token')
+  const adminRole = (sessionStorage.getItem('engiverse_admin_role') || '').toUpperCase();
+  const hasAdminSession = Boolean(
+    sessionStorage.getItem('engiverse_admin_token') &&
+    (adminRole === 'ADMIN' || adminRole === 'SUPERADMIN')
   );
 
   const initialLetter = (user.name ? user.name.trim().charAt(0) : 'E').toUpperCase();
@@ -62,7 +61,7 @@ export function renderParticipantPortalView(
               </div>
             </div>
 
-            ${isSuperadmin ? `
+            ${hasAdminSession ? `
               <button id="btn-portal-goto-admin" class="btn btn-secondary btn-pill" title="Access Administrator Console">
                 <span>${icon('Shield', 14)} Admin Console</span>
               </button>

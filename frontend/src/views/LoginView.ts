@@ -179,22 +179,9 @@ export function renderLoginView(
       if (dbResult.success && dbResult.user) {
         saveUserSession(dbResult.user);
 
-        // If this user is an administrator or superadmin, activate admin session as well
-        const isSuperadmin = (dbResult.user.badge && (
-          dbResult.user.badge.toLowerCase().includes('superadmin') ||
-          dbResult.user.badge.toLowerCase().includes('admin')
-        )) || (dbResult.user as any).role === 'SUPERADMIN';
-
-        if (isSuperadmin) {
-          sessionStorage.setItem('engiverse_admin_token', 'adm_jwt_' + btoa(Date.now().toString()));
-          sessionStorage.setItem('engiverse_admin_email', dbResult.user.email);
-          sessionStorage.setItem('engiverse_admin_name', dbResult.user.name);
-        }
-
         soundEngine.playCorrect();
         launchConfetti();
-        const roleGreeting = isSuperadmin ? 'Superadmin Access Confirmed.' : 'Authenticated via Turso Cloud.';
-        showToast(`Welcome back, ${dbResult.user.name}! ${roleGreeting}`, 'success');
+        showToast(`Welcome back, ${dbResult.user.name}! Authenticated via Turso Cloud.`, 'success');
         setTimeout(() => onNavigate('portal'), 850);
         return;
       }

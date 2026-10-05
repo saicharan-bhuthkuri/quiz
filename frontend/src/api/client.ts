@@ -76,19 +76,60 @@ export async function apiAdminLogin(email: string, password: string) {
   return res.json();
 }
 
+/**
+ * Helper to produce standard headers with Authorization Bearer token for Admin endpoints
+ */
+export function getAdminAuthHeaders(extraHeaders: Record<string, string> = {}): Record<string, string> {
+  const token = sessionStorage.getItem('engiverse_admin_token') || '';
+  const headers: Record<string, string> = {
+    'Content-Type': 'application/json',
+    ...extraHeaders
+  };
+  if (token) {
+    headers['Authorization'] = `Bearer ${token}`;
+    headers['x-admin-token'] = token;
+  }
+  return headers;
+}
+
+/**
+ * Cryptographically verifies current administrator session with backend RBAC middleware.
+ */
+export async function apiVerifyAdminSession(): Promise<{
+  success: boolean;
+  valid?: boolean;
+  admin?: AdminRecord;
+  error?: string;
+}> {
+  try {
+    const res = await fetch(`${API_BASE}/admin/verify-session`, {
+      headers: getAdminAuthHeaders(),
+      cache: 'no-store'
+    });
+    return res.json();
+  } catch (err: any) {
+    return { success: false, valid: false, error: err.message || 'Network error verifying admin session' };
+  }
+}
+
 export async function apiGetAdminUsers(): Promise<{ success: boolean; users: AdminUserRecord[]; count: number }> {
-  const res = await fetch(`${API_BASE}/admin/users`);
+  const res = await fetch(`${API_BASE}/admin/users`, {
+    headers: getAdminAuthHeaders()
+  });
   return res.json();
 }
 
 export async function apiGetAdminStats(): Promise<{ success: boolean; stats: AdminStats }> {
-  const res = await fetch(`${API_BASE}/admin/stats`);
+  const res = await fetch(`${API_BASE}/admin/stats`, {
+    headers: getAdminAuthHeaders()
+  });
   return res.json();
 }
 
 export async function apiDeleteUser(id: string): Promise<{ success: boolean; message?: string }> {
   const res = await fetch(`${API_BASE}/admin/users/${id}`, {
     method: 'DELETE',
+    headers: getAdminAuthHeaders()
   });
   return res.json();
 }
@@ -96,12 +137,15 @@ export async function apiDeleteUser(id: string): Promise<{ success: boolean; mes
 export async function apiSeedUsers(): Promise<{ success: boolean; message?: string }> {
   const res = await fetch(`${API_BASE}/admin/seed`, {
     method: 'POST',
+    headers: getAdminAuthHeaders()
   });
   return res.json();
 }
 
 export async function apiGetAdminList(): Promise<{ success: boolean; admins: AdminRecord[]; count: number }> {
-  const res = await fetch(`${API_BASE}/admin/list`);
+  const res = await fetch(`${API_BASE}/admin/list`, {
+    headers: getAdminAuthHeaders()
+  });
   return res.json();
 }
 
@@ -113,7 +157,7 @@ export async function apiAddAdmin(data: {
 }): Promise<{ success: boolean; message?: string; error?: string; admin?: AdminRecord }> {
   const res = await fetch(`${API_BASE}/admin/add`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAdminAuthHeaders(),
     body: JSON.stringify(data),
   });
   return res.json();
@@ -122,6 +166,7 @@ export async function apiAddAdmin(data: {
 export async function apiRemoveAdmin(id: string): Promise<{ success: boolean; message?: string; error?: string }> {
   const res = await fetch(`${API_BASE}/admin/remove/${id}`, {
     method: 'DELETE',
+    headers: getAdminAuthHeaders()
   });
   return res.json();
 }
@@ -212,7 +257,7 @@ export async function apiCreateEvent(data: {
 }): Promise<{ success: boolean; event: QuizEvent }> {
   const res = await fetch(`${API_BASE}/events`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAdminAuthHeaders(),
     body: JSON.stringify(data),
   });
   return res.json();
@@ -221,7 +266,7 @@ export async function apiCreateEvent(data: {
 export async function apiUpdateEvent(id: string, data: Partial<QuizEvent>): Promise<{ success: boolean; message: string }> {
   const res = await fetch(`${API_BASE}/events/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAdminAuthHeaders(),
     body: JSON.stringify(data),
   });
   return res.json();
@@ -230,13 +275,16 @@ export async function apiUpdateEvent(id: string, data: Partial<QuizEvent>): Prom
 export async function apiDeleteEvent(id: string): Promise<{ success: boolean; message: string }> {
   const res = await fetch(`${API_BASE}/events/${id}`, {
     method: 'DELETE',
+    headers: getAdminAuthHeaders()
   });
   return res.json();
 }
 
 export async function apiGetEventQuestions(eventId: string, role?: string): Promise<{ success: boolean; count: number; questions: EventQuestion[] }> {
   const url = role ? `${API_BASE}/events/${eventId}/questions?role=${role}` : `${API_BASE}/events/${eventId}/questions`;
-  const res = await fetch(url);
+  const res = await fetch(url, {
+    headers: getAdminAuthHeaders()
+  });
   return res.json();
 }
 
@@ -251,7 +299,7 @@ export async function apiAddEventQuestion(eventId: string, data: {
 }): Promise<{ success: boolean; question?: EventQuestion; message?: string }> {
   const res = await fetch(`${API_BASE}/events/${eventId}/questions`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAdminAuthHeaders(),
     body: JSON.stringify(data),
   });
   return res.json();
@@ -260,6 +308,7 @@ export async function apiAddEventQuestion(eventId: string, data: {
 export async function apiDeleteEventQuestion(eventId: string, qId: string): Promise<{ success: boolean; message: string }> {
   const res = await fetch(`${API_BASE}/events/${eventId}/questions/${qId}`, {
     method: 'DELETE',
+    headers: getAdminAuthHeaders()
   });
   return res.json();
 }
@@ -267,7 +316,7 @@ export async function apiDeleteEventQuestion(eventId: string, qId: string): Prom
 export async function apiUpdateEventQuestion(eventId: string, qId: string, data: Partial<EventQuestion>): Promise<{ success: boolean; message: string }> {
   const res = await fetch(`${API_BASE}/events/${eventId}/questions/${qId}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAdminAuthHeaders(),
     body: JSON.stringify(data),
   });
   return res.json();
@@ -294,6 +343,7 @@ export async function apiGetEventParticipants(eventId: string): Promise<{ succes
 export async function apiUnregisterEventParticipant(eventId: string, userId: string): Promise<{ success: boolean; message: string }> {
   const res = await fetch(`${API_BASE}/events/${eventId}/participants/${userId}`, {
     method: 'DELETE',
+    headers: getAdminAuthHeaders()
   });
   return res.json();
 }
@@ -408,12 +458,16 @@ export interface EventDashboardData {
 }
 
 export async function apiGetDailyDashboard(): Promise<DailyDashboardData> {
-  const res = await fetch(`${API_BASE}/admin/daily-dashboard`);
+  const res = await fetch(`${API_BASE}/admin/daily-dashboard`, {
+    headers: getAdminAuthHeaders()
+  });
   return res.json();
 }
 
 export async function apiGetEventDashboard(eventId: string): Promise<EventDashboardData> {
-  const res = await fetch(`${API_BASE}/admin/event-dashboard/${eventId}`);
+  const res = await fetch(`${API_BASE}/admin/event-dashboard/${eventId}`, {
+    headers: getAdminAuthHeaders()
+  });
   return res.json();
 }
 
@@ -504,7 +558,7 @@ export async function apiSaveUptimeRobotConfig(apiKey: string, monitorId?: strin
 }> {
   const res = await fetch(`${API_BASE}/uptimerobot/config`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAdminAuthHeaders(),
     body: JSON.stringify({ apiKey, monitorId })
   });
   return res.json();
@@ -533,7 +587,7 @@ export async function apiControlUptimeRobotMonitor(action: 'pause' | 'resume', m
 }> {
   const res = await fetch(`${API_BASE}/uptimerobot/action`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAdminAuthHeaders(),
     body: JSON.stringify({ action, monitorId })
   });
   return res.json();
@@ -648,7 +702,7 @@ export async function apiAddBranch(data: {
 }): Promise<{ success: boolean; message?: string; error?: string; branch?: BranchRecord }> {
   const res = await fetch(`${API_BASE}/admin/branches`, {
     method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAdminAuthHeaders(),
     body: JSON.stringify(data),
   });
   return res.json();
@@ -664,7 +718,7 @@ export async function apiUpdateBranch(
 ): Promise<{ success: boolean; message?: string; error?: string; branch?: BranchRecord }> {
   const res = await fetch(`${API_BASE}/admin/branches/${id}`, {
     method: 'PUT',
-    headers: { 'Content-Type': 'application/json' },
+    headers: getAdminAuthHeaders(),
     body: JSON.stringify(data),
   });
   return res.json();
@@ -679,6 +733,7 @@ export async function apiDeleteBranch(id: string): Promise<{
 }> {
   const res = await fetch(`${API_BASE}/admin/branches/${id}`, {
     method: 'DELETE',
+    headers: getAdminAuthHeaders()
   });
   return res.json();
 }

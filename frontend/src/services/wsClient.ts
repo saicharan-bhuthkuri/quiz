@@ -26,13 +26,14 @@ class RealtimeWebSocketClient {
       const adminToken = sessionStorage.getItem('engiverse_admin_token');
       const adminEmail = sessionStorage.getItem('engiverse_admin_email');
       const adminName = sessionStorage.getItem('engiverse_admin_name');
+      const adminRole = sessionStorage.getItem('engiverse_admin_role');
 
-      if (adminToken) {
+      if (adminToken && (adminRole === 'ADMIN' || adminRole === 'SUPERADMIN')) {
         this.currentUser = {
           id: 'admin_' + (adminEmail || 'root'),
           name: adminName || 'Platform Administrator',
           email: adminEmail || 'admin@engiverse.io',
-          role: 'ADMIN'
+          role: adminRole
         };
         return;
       }
@@ -44,7 +45,7 @@ class RealtimeWebSocketClient {
           id: u.id,
           name: u.name,
           email: u.email,
-          role: u.badge?.toLowerCase().includes('admin') ? 'ADMIN' : 'PARTICIPANT'
+          role: 'PARTICIPANT'
         };
       }
     } catch {
@@ -93,12 +94,15 @@ class RealtimeWebSocketClient {
           this.reconnectTimeout = null;
         }
 
+        const adminToken = sessionStorage.getItem('engiverse_admin_token') || undefined;
+
         // Identify client
         if (this.currentUser) {
           this.send('IDENTIFY', {
             userId: this.currentUser.id,
             userName: this.currentUser.name,
-            role: this.currentUser.role || 'PARTICIPANT'
+            role: this.currentUser.role || 'PARTICIPANT',
+            adminToken
           });
         }
 
@@ -107,7 +111,9 @@ class RealtimeWebSocketClient {
           this.send('JOIN_EVENT_ROOM', {
             eventId: this.currentEventId,
             userId: this.currentUser?.id,
-            userName: this.currentUser?.name
+            userName: this.currentUser?.name,
+            role: this.currentUser?.role,
+            adminToken
           });
         }
       };

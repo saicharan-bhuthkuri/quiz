@@ -29,6 +29,8 @@ import {
 } from './schemas/index.js';
 import { requestIdMiddleware, centralizedErrorHandler } from './middleware/errorHandler.js';
 import { processAndSaveBase64Image, getSafeFilePath } from './utils/fileUpload.js';
+import { requireAdminAuth } from './middleware/adminAuth.js';
+import { signAdminToken, verifyAdminToken } from './utils/adminToken.js';
 
 dotenv.config();
 
@@ -408,7 +410,7 @@ app.post('/api/uptimerobot/ping', userRateLimiter, validateBody(uptimePingSchema
 });
 
 // Pause / Resume Monitor
-app.post('/api/uptimerobot/action', userRateLimiter, validateBody(uptimeActionSchema), async (req: Request, res: Response) => {
+app.post('/api/uptimerobot/action', userRateLimiter, requireAdminAuth(['ADMIN', 'SUPERADMIN']), validateBody(uptimeActionSchema), async (req: Request, res: Response) => {
   try {
     const { action, monitorId } = req.body;
     const dbKey = (await getSystemSetting('UPTIMEROBOT_API_KEY')) || '';
@@ -452,7 +454,7 @@ app.post('/api/uptimerobot/action', userRateLimiter, validateBody(uptimeActionSc
   }
 });
 
-app.post('/api/uptimerobot/config', userRateLimiter, validateBody(uptimeConfigSchema), async (req: Request, res: Response) => {
+app.post('/api/uptimerobot/config', userRateLimiter, requireAdminAuth(['ADMIN', 'SUPERADMIN']), validateBody(uptimeConfigSchema), async (req: Request, res: Response) => {
   try {
     const { apiKey, monitorId } = req.body;
 
@@ -504,7 +506,7 @@ app.post('/api/uptimerobot/config', userRateLimiter, validateBody(uptimeConfigSc
   }
 });
 
-app.get('/api/uptimerobot/config', async (_req: Request, res: Response) => {
+app.get('/api/uptimerobot/config', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (_req: Request, res: Response) => {
   try {
     const dbKey = await getSystemSetting('UPTIMEROBOT_API_KEY');
     const envKey = process.env.UPTIMEROBOT_API_KEY || '';
@@ -623,6 +625,13 @@ app.post('/api/auth/login', authRateLimiter, validateBody(loginSchema), async (r
 
       if (matchedAdmin) {
         recordAuthSuccess(req);
+        const adminRole = (String(matchedAdmin.role || 'ADMIN').toUpperCase() === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') as 'ADMIN' | 'SUPERADMIN';
+        const adminToken = signAdminToken({
+          id: String(matchedAdmin.id || 'adm_primary_super'),
+          email: String(matchedAdmin.email || adminEmail),
+          name: String(matchedAdmin.name || adminName),
+          role: adminRole
+        });
         const adminUser = {
           id: String(matchedAdmin.id || 'adm_primary_super'),
           name: String(matchedAdmin.name || adminName),
@@ -634,10 +643,10 @@ app.post('/api/auth/login', authRateLimiter, validateBody(loginSchema), async (r
           avatar: '',
           streak: 1,
           xp: 0,
-          badge: 'SUPERADMIN',
+          badge: adminRole,
           joinedAt: new Date().toLocaleDateString()
         };
-        return res.json({ success: true, user: adminUser });
+        return res.json({ success: true, user: adminUser, adminToken, adminRole });
       } else {
         recordAuthFailure(req);
         return res.status(401).json({ success: false, error: 'Invalid email or password' });
@@ -716,6 +725,14 @@ app.post('/api/admin/login', authRateLimiter, validateBody(loginSchema), async (
           });
         }
 
+        const adminRole = (String(row.role || 'ADMIN').toUpperCase() === 'SUPERADMIN' ? 'SUPERADMIN' : 'ADMIN') as 'ADMIN' | 'SUPERADMIN';
+        const token = signAdminToken({
+          id: String(row.id),
+          email: String(row.email),
+          name: String(row.name),
+          role: adminRole
+        });
+
         recordAuthSuccess(req);
         return res.json({
           success: true,
@@ -723,8 +740,8 @@ app.post('/api/admin/login', authRateLimiter, validateBody(loginSchema), async (
             id: String(row.id),
             email: String(row.email),
             name: String(row.name),
-            role: String(row.role || 'ADMIN'),
-            token: 'adm_jwt_' + Buffer.from(Date.now().toString()).toString('base64')
+            role: adminRole,
+            token
           }
         });
       }
@@ -733,6 +750,13 @@ app.post('/api/admin/login', authRateLimiter, validateBody(loginSchema), async (
     // Fallback check against env credentials
     if (adminPassword && adminEmail && email && email.trim().toLowerCase() === adminEmail && password === adminPassword) {
       recordAuthSuccess(req);
+      const token = signAdminToken({
+        id: 'adm_primary_super',
+        email: adminEmail,
+        name: adminName,
+        role: 'SUPERADMIN'
+      });
+
       return res.json({
         success: true,
         admin: {
@@ -740,7 +764,7 @@ app.post('/api/admin/login', authRateLimiter, validateBody(loginSchema), async (
           email: adminEmail,
           name: adminName,
           role: 'SUPERADMIN',
-          token: 'adm_jwt_' + Buffer.from(Date.now().toString()).toString('base64')
+          token
         }
       });
     }
@@ -752,8 +776,22 @@ app.post('/api/admin/login', authRateLimiter, validateBody(loginSchema), async (
   }
 });
 
-// List all administrators
-app.get('/api/admin/list', async (_req: Request, res: Response) => {
+// Verify Admin Session & Permissions (RBAC)
+app.get('/api/admin/verify-session', requireAdminAuth(['ADMIN', 'SUPERADMIN']), (req: Request, res: Response) => {
+  return res.json({
+    success: true,
+    valid: true,
+    admin: {
+      id: req.admin?.id,
+      email: req.admin?.email,
+      name: req.admin?.name,
+      role: req.admin?.role
+    }
+  });
+});
+
+// List all administrators (Admin and Superadmin)
+app.get('/api/admin/list', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (_req: Request, res: Response) => {
   try {
     const result = await db.execute(`
       SELECT id, name, email, role, created_at
@@ -776,8 +814,8 @@ app.get('/api/admin/list', async (_req: Request, res: Response) => {
   }
 });
 
-// Add new administrator
-app.post('/api/admin/add', async (req: Request, res: Response) => {
+// Add new administrator (Super Admin strictly required)
+app.post('/api/admin/add', requireAdminAuth(['SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { name, email, password, role } = req.body;
 
@@ -822,8 +860,8 @@ app.post('/api/admin/add', async (req: Request, res: Response) => {
   }
 });
 
-// Remove administrator
-app.delete('/api/admin/remove/:id', async (req: Request, res: Response) => {
+// Remove administrator (Super Admin strictly required)
+app.delete('/api/admin/remove/:id', requireAdminAuth(['SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -891,7 +929,7 @@ app.get('/api/branches', async (_req: Request, res: Response) => {
 });
 
 // 2. Add new branch (Super Admin & Admin)
-app.post('/api/admin/branches', async (req: Request, res: Response) => {
+app.post('/api/admin/branches', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { name, code, description } = req.body;
 
@@ -943,7 +981,7 @@ app.post('/api/admin/branches', async (req: Request, res: Response) => {
 });
 
 // 3. Edit branch (Super Admin & Admin)
-app.put('/api/admin/branches/:id', async (req: Request, res: Response) => {
+app.put('/api/admin/branches/:id', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { name, code, description } = req.body;
@@ -1026,7 +1064,7 @@ app.put('/api/admin/branches/:id', async (req: Request, res: Response) => {
 });
 
 // 4. Delete branch with confirmation and validation (Super Admin & Admin)
-app.delete('/api/admin/branches/:id', async (req: Request, res: Response) => {
+app.delete('/api/admin/branches/:id', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -1103,12 +1141,12 @@ app.delete('/api/admin/branches/:id', async (req: Request, res: Response) => {
 });
 
 // Seed sample users into Turso DB (disabled)
-app.post('/api/admin/seed', async (_req: Request, res: Response) => {
+app.post('/api/admin/seed', requireAdminAuth(['SUPERADMIN']), async (_req: Request, res: Response) => {
   res.json({ success: false, message: 'Sample user seeding has been permanently disabled' });
 });
 
 // Get all registered users from Turso DB
-app.get('/api/admin/users', async (_req: Request, res: Response) => {
+app.get('/api/admin/users', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (_req: Request, res: Response) => {
   try {
     const result = await db.execute(`
       SELECT id, name, email, mobile, branch, year, avatar, streak, xp, badge, created_at
@@ -1138,7 +1176,7 @@ app.get('/api/admin/users', async (_req: Request, res: Response) => {
 });
 
 // Delete user by ID from Turso DB
-app.delete('/api/admin/users/:id', async (req: Request, res: Response) => {
+app.delete('/api/admin/users/:id', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     await db.execute({
@@ -1154,7 +1192,7 @@ app.delete('/api/admin/users/:id', async (req: Request, res: Response) => {
 });
 
 // Get aggregate platform analytics for the Admin Dashboard
-app.get('/api/admin/stats', async (_req: Request, res: Response) => {
+app.get('/api/admin/stats', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (_req: Request, res: Response) => {
   try {
     const usersCountRes = await db.execute('SELECT COUNT(*) as total_users FROM users;');
     const totalXpRes = await db.execute('SELECT SUM(xp) as total_xp FROM users;');
@@ -1330,7 +1368,7 @@ app.get('/api/events/:id', async (req: Request, res: Response) => {
 });
 
 // 3. Create Event (Admin)
-app.post('/api/events', async (req: Request, res: Response) => {
+app.post('/api/events', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { title, description, domain, timerSeconds } = req.body;
 
@@ -1371,7 +1409,7 @@ app.post('/api/events', async (req: Request, res: Response) => {
 });
 
 // 4. Update Event (Admin)
-app.put('/api/events/:id', async (req: Request, res: Response) => {
+app.put('/api/events/:id', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { title, description, domain, status, timerSeconds } = req.body;
@@ -1406,7 +1444,7 @@ app.put('/api/events/:id', async (req: Request, res: Response) => {
 });
 
 // 5. Delete Event (Admin)
-app.delete('/api/events/:id', async (req: Request, res: Response) => {
+app.delete('/api/events/:id', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
 
@@ -1428,8 +1466,10 @@ app.delete('/api/events/:id', async (req: Request, res: Response) => {
 app.get('/api/events/:id/questions', async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
-    const role = String(req.query.role || '').toUpperCase();
-    const isAdmin = role === 'ADMIN' || role === 'SUPERADMIN';
+    const authHeader = req.headers['authorization'];
+    const token = (authHeader && authHeader.startsWith('Bearer ')) ? authHeader.substring(7).trim() : (req.headers['x-admin-token'] as string);
+    const verified = verifyAdminToken(token);
+    const isAdmin = !!(verified && (verified.role === 'ADMIN' || verified.role === 'SUPERADMIN'));
 
     const result = await db.execute({
       sql: 'SELECT * FROM event_questions WHERE event_id = ? ORDER BY question_order ASC;',
@@ -1452,7 +1492,7 @@ app.get('/api/events/:id/questions', async (req: Request, res: Response) => {
         points: Number(row.points || 100),
         timerSeconds: Number(row.timer_seconds || 30),
         questionOrder: Number(row.question_order || 1),
-        // Reveal correct answer only to authorized admin staff
+        // Reveal correct answer only to authorized admin staff with verified token
         ...(isAdmin ? { correctOption: Number(row.correct_option || 0), explanation: String(row.explanation || '') } : {})
       };
     });
@@ -1465,7 +1505,7 @@ app.get('/api/events/:id/questions', async (req: Request, res: Response) => {
 });
 
 // 7. Add question to event (Admin)
-app.post('/api/events/:id/questions', async (req: Request, res: Response) => {
+app.post('/api/events/:id/questions', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { id } = req.params;
     const { questionText, options, correctOption, explanation, points, timerSeconds, questionOrder } = req.body;
@@ -1512,7 +1552,7 @@ app.post('/api/events/:id/questions', async (req: Request, res: Response) => {
 });
 
 // 8. Delete question (Admin)
-app.delete('/api/events/:id/questions/:qId', async (req: Request, res: Response) => {
+app.delete('/api/events/:id/questions/:qId', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { id, qId } = req.params;
     await db.execute({
@@ -1529,7 +1569,7 @@ app.delete('/api/events/:id/questions/:qId', async (req: Request, res: Response)
 });
 
 // Update question (Admin)
-app.put('/api/events/:id/questions/:qId', async (req: Request, res: Response) => {
+app.put('/api/events/:id/questions/:qId', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { id, qId } = req.params;
     const { questionText, options, correctOption, explanation, points, timerSeconds, questionOrder } = req.body;
@@ -1653,7 +1693,7 @@ app.get('/api/events/:id/participants', async (req: Request, res: Response) => {
 });
 
 // Unregister participant (Admin)
-app.delete('/api/events/:id/participants/:userId', async (req: Request, res: Response) => {
+app.delete('/api/events/:id/participants/:userId', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (req: Request, res: Response) => {
   try {
     const { id, userId } = req.params;
     await db.execute({
@@ -1759,7 +1799,7 @@ app.get('/api/daily-quiz/history/:userEmail', async (req: Request, res: Response
 });
 
 // 14. Dedicated Daily Dashboard API (Completely independent of events)
-app.get('/api/admin/daily-dashboard', async (_req: Request, res: Response) => {
+app.get('/api/admin/daily-dashboard', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (_req: Request, res: Response) => {
   try {
     const totalAttemptsRes = await db.execute('SELECT COUNT(*) as total_attempts FROM daily_quiz_attempts;');
     const totalXpRes = await db.execute('SELECT SUM(xp_earned) as total_xp FROM daily_quiz_attempts;');
@@ -1841,7 +1881,7 @@ app.get('/api/admin/daily-dashboard', async (_req: Request, res: Response) => {
 });
 
 // 15. Dedicated Event Dashboard API (Strictly limited to the selected event only)
-app.get('/api/admin/event-dashboard/:eventId', async (req: Request, res: Response, next: NextFunction) => {
+app.get('/api/admin/event-dashboard/:eventId', requireAdminAuth(['ADMIN', 'SUPERADMIN']), async (req: Request, res: Response, next: NextFunction) => {
   try {
     const { eventId } = req.params;
 

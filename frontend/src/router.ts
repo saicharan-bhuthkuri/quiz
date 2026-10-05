@@ -7,6 +7,7 @@ import { renderParticipantPortalView } from './views/ParticipantPortalView.ts';
 import { renderDailyQuizView } from './views/DailyQuizView.ts';
 import { renderEventsListView } from './views/EventsListView.ts';
 import { renderLiveEventQuizView } from './views/LiveEventQuizView.ts';
+import { showToast } from './components/Toast.ts';
 
 export type AppView =
   | 'landing'
@@ -33,6 +34,24 @@ export class AppRouter {
     this.init();
   }
 
+  private checkAdminAccess(): boolean {
+    const adminToken = sessionStorage.getItem('engiverse_admin_token');
+    const adminRole = (sessionStorage.getItem('engiverse_admin_role') || '').toUpperCase();
+    return Boolean(adminToken && (adminRole === 'ADMIN' || adminRole === 'SUPERADMIN'));
+  }
+
+  private redirectToAuthorized(reason: string = 'Access Denied: Administrative privileges required.'): void {
+    showToast(reason, 'warn');
+    const hasStudentUser = Boolean(localStorage.getItem('engiverse_user'));
+    if (hasStudentUser) {
+      this.currentView = 'portal';
+      window.location.hash = '#portal';
+    } else {
+      this.currentView = 'admin-login';
+      window.location.hash = '#admin-login';
+    }
+  }
+
   private init(): void {
     // Listen for hash changes
     window.addEventListener('hashchange', () => {
@@ -44,6 +63,12 @@ export class AppRouter {
   }
 
   public navigateTo(view: AppView | string, params?: any): void {
+    if (view === 'admin-dashboard' && !this.checkAdminAccess()) {
+      this.redirectToAuthorized('Access Denied: Please log in with an authorized Administrator account.');
+      this.render();
+      return;
+    }
+
     this.currentView = view as AppView;
     this.currentParams = params || null;
 
@@ -79,6 +104,11 @@ export class AppRouter {
     } else if (hash === '#admin-login') {
       this.currentView = 'admin-login';
     } else if (hash === '#admin' || hash === '#admin-dashboard') {
+      if (!this.checkAdminAccess()) {
+        this.redirectToAuthorized('Access Denied: Administrative privileges required to access Admin Dashboard.');
+        this.render();
+        return;
+      }
       this.currentView = 'admin-dashboard';
     } else if (hash === '#portal' || hash === '#dashboard') {
       this.currentView = 'portal';
@@ -100,6 +130,12 @@ export class AppRouter {
 
   private render(): void {
     window.scrollTo({ top: 0, behavior: 'instant' });
+
+    if (this.currentView === 'admin-dashboard' && !this.checkAdminAccess()) {
+      this.redirectToAuthorized();
+      return;
+    }
+
     this.root.innerHTML = '';
 
     const nav = (nextView: string, params?: any) => this.navigateTo(nextView as AppView, params);

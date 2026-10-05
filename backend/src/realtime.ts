@@ -1,6 +1,7 @@
 import { WebSocketServer, WebSocket } from 'ws';
 import { Server as HttpServer } from 'http';
 import { db } from './db.js';
+import { verifyAdminToken } from './utils/adminToken.js';
 
 export interface EventQuestionData {
   id: string;
@@ -48,10 +49,7 @@ interface ClientConnection {
 export function isHostAdminClient(client: ClientConnection | { role?: string; userId?: string }): boolean {
   if (!client) return false;
   const role = String(client.role || '').toUpperCase();
-  if (role === 'ADMIN' || role === 'SUPERADMIN') return true;
-  const uid = String(client.userId || '');
-  if (uid.startsWith('adm_')) return true;
-  return false;
+  return role === 'ADMIN' || role === 'SUPERADMIN';
 }
 
 class RealtimeQuizEngine {
@@ -244,22 +242,59 @@ class RealtimeQuizEngine {
   private async handleClientMessage(client: ClientConnection, msg: any) {
     const { type, payload } = msg;
 
+    // Strict RBAC gate for all administrative commands
+    if (type && typeof type === 'string' && type.startsWith('ADMIN_')) {
+      if (!isHostAdminClient(client)) {
+        console.warn(`[Realtime Engine] Blocked unauthorized admin action attempt: type=${type} from non-admin client=${client.userId || 'anon'}`);
+        this.sendToClient(client, {
+          type: 'ERROR',
+          payload: { message: 'Unauthorized: Administrative role required to execute this command.' }
+        });
+        return;
+      }
+    }
+
     switch (type) {
       case 'IDENTIFY': {
         client.userId = payload?.userId;
         client.userName = payload?.userName;
-        client.role = payload?.role || 'PARTICIPANT';
+        const requestedRole = String(payload?.role || '').toUpperCase();
+        if (requestedRole === 'ADMIN' || requestedRole === 'SUPERADMIN') {
+          const verified = verifyAdminToken(payload?.adminToken);
+          if (verified && (verified.role === 'ADMIN' || verified.role === 'SUPERADMIN')) {
+            client.role = verified.role;
+            client.userId = verified.id;
+            client.userName = verified.name;
+          } else {
+            client.role = 'PARTICIPANT';
+          }
+        } else {
+          client.role = 'PARTICIPANT';
+        }
         break;
       }
 
       case 'JOIN_EVENT_ROOM': {
-        const { eventId, userId, userName, role } = payload || {};
+        const { eventId, userId, userName, role, adminToken } = payload || {};
         if (!eventId) return;
 
         client.currentEventId = eventId;
         if (userId) client.userId = userId;
         if (userName) client.userName = userName;
-        if (role) client.role = role;
+
+        const requestedRole = String(role || '').toUpperCase();
+        if (requestedRole === 'ADMIN' || requestedRole === 'SUPERADMIN') {
+          const verified = verifyAdminToken(adminToken);
+          if (verified && (verified.role === 'ADMIN' || verified.role === 'SUPERADMIN')) {
+            client.role = verified.role;
+            client.userId = verified.id;
+            client.userName = verified.name;
+          } else if (client.role !== 'ADMIN' && client.role !== 'SUPERADMIN') {
+            client.role = 'PARTICIPANT';
+          }
+        } else if (!client.role) {
+          client.role = 'PARTICIPANT';
+        }
 
         const state = await this.getOrLoadEventState(eventId);
         if (!state) return;

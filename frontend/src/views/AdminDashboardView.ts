@@ -1,4 +1,5 @@
 import {
+  apiVerifyAdminSession,
   apiGetAdminUsers,
   apiGetAdminStats,
   apiDeleteUser,
@@ -53,12 +54,33 @@ export function renderAdminDashboardView(
   container: HTMLElement,
   onNavigate: (view: string) => void
 ): void {
-  // Check admin session
+  // 1. Synchronously verify admin credentials and role from session
   const adminToken = sessionStorage.getItem('engiverse_admin_token');
-  if (!adminToken) {
-    onNavigate('admin-login');
+  const adminRole = (sessionStorage.getItem('engiverse_admin_role') || '').toUpperCase();
+
+  if (!adminToken || (adminRole !== 'ADMIN' && adminRole !== 'SUPERADMIN')) {
+    sessionStorage.removeItem('engiverse_admin_token');
+    sessionStorage.removeItem('engiverse_admin_role');
+    const hasStudentSession = Boolean(localStorage.getItem('engiverse_user'));
+    showToast('Access Denied: Administrative privileges required.', 'warn');
+    onNavigate(hasStudentSession ? 'portal' : 'admin-login');
     return;
   }
+
+  // 2. Asynchronously verify token validity and active role against backend API
+  apiVerifyAdminSession().then((res) => {
+    if (!res.success || !res.valid) {
+      sessionStorage.removeItem('engiverse_admin_token');
+      sessionStorage.removeItem('engiverse_admin_role');
+      sessionStorage.removeItem('engiverse_admin_email');
+      sessionStorage.removeItem('engiverse_admin_name');
+      showToast('Administrative session expired or unauthorized. Please sign in again.', 'warn');
+      const hasStudentSession = Boolean(localStorage.getItem('engiverse_user'));
+      onNavigate(hasStudentSession ? 'portal' : 'admin-login');
+    }
+  }).catch((err) => {
+    console.warn('[AdminDashboard] Session verification notice:', err);
+  });
 
   // Ensure WebSocket is connected and authenticated as ADMIN
   wsClient.connect();
@@ -67,6 +89,7 @@ export function renderAdminDashboardView(
   const currentAdminEmail = sessionStorage.getItem('engiverse_admin_email') || '';
   const rawAdminName = sessionStorage.getItem('engiverse_admin_name') || 'Administrator';
   const currentAdminName = rawAdminName.replace(/\s*\(Superadmin\)/i, '').trim();
+  const isSuperAdmin = adminRole === 'SUPERADMIN';
 
   container.innerHTML = `
     <div class="admin-shell-layout" id="admin-shell">
@@ -183,12 +206,12 @@ export function renderAdminDashboardView(
           <div class="current-admin-card">
             <div class="sidebar-avatar-wrapper">
               ${renderAlphabetAvatar(currentAdminName, 'sidebar-admin-avatar')}
-              <span class="sidebar-avatar-badge" title="Superadmin Verified">${icon('ShieldCheck', 10)}</span>
+              <span class="sidebar-avatar-badge" title="${isSuperAdmin ? 'Superadmin Verified' : 'Admin Verified'}">${icon('ShieldCheck', 10)}</span>
             </div>
             <div class="current-admin-meta">
               <div class="current-admin-header-row">
                 <span class="current-admin-name" title="${escapeHtml(currentAdminName)}">${escapeHtml(currentAdminName)}</span>
-                <span class="current-admin-role-chip">SUPERADMIN</span>
+                <span class="current-admin-role-chip ${isSuperAdmin ? 'role-super' : 'role-admin'}">${isSuperAdmin ? 'SUPERADMIN' : 'ADMIN'}</span>
               </div>
               <span class="current-admin-email" title="${escapeHtml(currentAdminEmail)}">${escapeHtml(currentAdminEmail)}</span>
             </div>
@@ -520,9 +543,15 @@ export function renderAdminDashboardView(
                   </div>
                   <p class="admin-view-desc">Privileged administrator accounts authorized to manage the Engiverse platform, Turso databases, and security keys.</p>
                 </div>
-                <button id="btn-open-add-admin-modal" class="btn btn-primary btn-pill">
-                  <span>${icon('Plus', 15)} Add New Admin</span>
-                </button>
+                ${isSuperAdmin ? `
+                  <button id="btn-open-add-admin-modal" class="btn btn-primary btn-pill">
+                    <span>${icon('Plus', 15)} Add New Admin</span>
+                  </button>
+                ` : `
+                  <div class="admin-super-notice-pill" title="Superadministrator role required to provision new administrators">
+                    ${icon('Lock', 13)} Superadmin Restricted
+                  </div>
+                `}
               </div>
             </div>
 
@@ -2761,6 +2790,10 @@ export function renderAdminDashboardView(
   });
 
   const showAddAdminModal = () => {
+    if (!isSuperAdmin) {
+      showToast('Permission Denied: Only Super Administrators can provision new administrators.', 'warn');
+      return;
+    }
     soundEngine.playClick();
     if (addAdminModal) {
       formAddAdmin?.reset();
@@ -2783,6 +2816,10 @@ export function renderAdminDashboardView(
   // Add Admin Form Submit
   formAddAdmin?.addEventListener('submit', async (e) => {
     e.preventDefault();
+    if (!isSuperAdmin) {
+      showToast('Permission Denied: Only Super Administrators can provision new administrators.', 'warn');
+      return;
+    }
     const nameInput = container.querySelector<HTMLInputElement>('#new-admin-name');
     const emailInput = container.querySelector<HTMLInputElement>('#new-admin-email');
     const roleInput = container.querySelector<HTMLSelectElement>('#new-admin-role');
@@ -3199,9 +3236,11 @@ export function renderAdminDashboardView(
           <td style="text-align: right;">
             ${isPrimarySuper
             ? `<span class="protected-badge" title="Primary Superadmin account cannot be removed">${icon('Lock', 12)} Protected</span>`
-            : `<button class="btn-action-delete btn-remove-admin" data-id="${adm.id}" data-name="${escapeHtml(adm.name)}" title="Remove administrator access">
-                    ${icon('Trash2', 13)} Remove
-                  </button>`
+            : isSuperAdmin
+              ? `<button class="btn-action-delete btn-remove-admin" data-id="${adm.id}" data-name="${escapeHtml(adm.name)}" title="Remove administrator access">
+                      ${icon('Trash2', 13)} Remove
+                    </button>`
+              : `<span class="protected-badge" title="Superadministrator privileges required to remove administrators">${icon('Lock', 12)} Restricted</span>`
           }
           </td>
         </tr>
@@ -3212,6 +3251,10 @@ export function renderAdminDashboardView(
     // Attach Remove Admin Listeners
     tbody.querySelectorAll<HTMLButtonElement>('.btn-remove-admin').forEach(btn => {
       btn.addEventListener('click', async () => {
+        if (!isSuperAdmin) {
+          showToast('Permission Denied: Only Super Administrators can remove administrators.', 'warn');
+          return;
+        }
         const id = btn.getAttribute('data-id');
         const name = btn.getAttribute('data-name');
         if (!id) return;

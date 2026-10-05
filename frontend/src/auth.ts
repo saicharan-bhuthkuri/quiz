@@ -48,6 +48,7 @@ export function clearUserSession(): void {
   sessionStorage.removeItem('engiverse_admin_token');
   sessionStorage.removeItem('engiverse_admin_email');
   sessionStorage.removeItem('engiverse_admin_name');
+  sessionStorage.removeItem('engiverse_admin_role');
 }
 
 export function logoutUser(): void {

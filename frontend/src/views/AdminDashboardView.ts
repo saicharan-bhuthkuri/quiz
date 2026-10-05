@@ -2249,55 +2249,71 @@ export function renderAdminDashboardView(
       </div>
 
       <!-- Add Branch Modal -->
-      <div id="admin-add-branch-modal" class="admin-modal-backdrop" style="display: none;">
+      <div id="admin-add-branch-modal" class="admin-modal-overlay" style="display: none;">
         <div class="admin-modal-card">
           <div class="admin-modal-header">
-            <div class="modal-title-with-badge">
-              <span class="modal-badge-chip">${icon('GraduationCap', 14)} CREATE DISCIPLINE</span>
-              <h2 class="admin-modal-title">Add New Engineering Branch</h2>
+            <div class="modal-header-title">
+              <span class="modal-badge-chip" style="color: #4f46e5;">${icon('GraduationCap', 14)} CREATE DISCIPLINE</span>
+              <h2>Add New Engineering Branch</h2>
             </div>
-            <button id="btn-close-add-branch-modal" class="btn-close-modal" aria-label="Close dialog">
+            <button id="btn-close-add-branch-modal" class="btn-close-modal" aria-label="Close modal">
               ${icon('X', 18)}
             </button>
           </div>
 
-          <form id="form-add-branch" class="admin-modal-form">
+          <form id="form-add-branch" class="admin-modal-body">
+            <p style="color: var(--text-muted); font-size: 0.88rem; margin-bottom: 1.25rem;">
+              Define a new engineering discipline. Once added, students can choose this branch during registration and administrators can filter platform analytics accordingly.
+            </p>
+
             <div class="form-group" style="margin-bottom: 1.15rem;">
               <label class="form-label" for="add-branch-name">Branch Full Name <span style="color: #ef4444;">*</span></label>
-              <input
-                type="text"
-                id="add-branch-name"
-                class="auth-input"
-                placeholder="e.g. Biomedical Engineering, Robotics & Automation"
-                required
-                minlength="2"
-              />
-              <span style="font-size: 0.76rem; color: var(--text-muted); margin-top: 0.3rem; display: block;">
+              <div class="input-wrapper">
+                <span class="input-icon">${icon('GraduationCap', 16)}</span>
+                <input
+                  type="text"
+                  id="add-branch-name"
+                  class="auth-input"
+                  placeholder="e.g. Biomedical Engineering, Robotics & Automation"
+                  required
+                  minlength="2"
+                />
+              </div>
+              <span class="form-helper-text">
                 Full formal engineering branch title displayed in registration and user profiles.
               </span>
             </div>
 
             <div class="form-group" style="margin-bottom: 1.15rem;">
               <label class="form-label" for="add-branch-code">Branch Acronym / Code <span style="color: var(--text-muted); font-size: 0.75rem;">(Optional)</span></label>
-              <input
-                type="text"
-                id="add-branch-code"
-                class="auth-input"
-                placeholder="e.g. BME, ROBO, CSE"
-                style="text-transform: uppercase;"
-                maxlength="12"
-              />
+              <div class="input-wrapper">
+                <span class="input-icon">${icon('Tag', 16)}</span>
+                <input
+                  type="text"
+                  id="add-branch-code"
+                  class="auth-input"
+                  placeholder="e.g. BME, ROBO, CSE"
+                  style="text-transform: uppercase;"
+                  maxlength="12"
+                />
+              </div>
+              <span class="form-helper-text">
+                Short code for quick pills and filter badges.
+              </span>
             </div>
 
             <div class="form-group" style="margin-bottom: 1.5rem;">
               <label class="form-label" for="add-branch-desc">Description / Focus Areas <span style="color: var(--text-muted); font-size: 0.75rem;">(Optional)</span></label>
-              <textarea
-                id="add-branch-desc"
-                class="auth-input"
-                rows="3"
-                placeholder="Core topics, subject scope, and focus areas..."
-                style="resize: vertical; min-height: 75px;"
-              ></textarea>
+              <div class="input-wrapper" style="align-items: flex-start;">
+                <span class="input-icon" style="margin-top: 0.8rem;">${icon('FileText', 16)}</span>
+                <textarea
+                  id="add-branch-desc"
+                  class="auth-input"
+                  rows="3"
+                  placeholder="Core topics, subject scope, and focus areas..."
+                  style="resize: vertical; min-height: 80px; padding-top: 0.75rem;"
+                ></textarea>
+              </div>
             </div>
 
             <div class="modal-actions-row">
@@ -2313,56 +2329,67 @@ export function renderAdminDashboardView(
       </div>
 
       <!-- Edit Branch Modal -->
-      <div id="admin-edit-branch-modal" class="admin-modal-backdrop" style="display: none;">
+      <div id="admin-edit-branch-modal" class="admin-modal-overlay" style="display: none;">
         <div class="admin-modal-card">
           <div class="admin-modal-header">
-            <div class="modal-title-with-badge">
-              <span class="modal-badge-chip">${icon('Edit3', 14)} UPDATE DISCIPLINE</span>
-              <h2 class="admin-modal-title">Edit Engineering Branch</h2>
+            <div class="modal-header-title">
+              <span class="modal-badge-chip" style="color: #0284c7;">${icon('Edit3', 14)} UPDATE DISCIPLINE</span>
+              <h2>Edit Engineering Branch</h2>
             </div>
-            <button id="btn-close-edit-branch-modal" class="btn-close-modal" aria-label="Close dialog">
+            <button id="btn-close-edit-branch-modal" class="btn-close-modal" aria-label="Close modal">
               ${icon('X', 18)}
             </button>
           </div>
 
-          <form id="form-edit-branch" class="admin-modal-form">
+          <form id="form-edit-branch" class="admin-modal-body">
             <input type="hidden" id="edit-branch-id" value="" />
 
             <div class="form-group" style="margin-bottom: 1.15rem;">
               <label class="form-label" for="edit-branch-name">Branch Full Name <span style="color: #ef4444;">*</span></label>
-              <input
-                type="text"
-                id="edit-branch-name"
-                class="auth-input"
-                required
-                minlength="2"
-              />
+              <div class="input-wrapper">
+                <span class="input-icon">${icon('GraduationCap', 16)}</span>
+                <input
+                  type="text"
+                  id="edit-branch-name"
+                  class="auth-input"
+                  required
+                  minlength="2"
+                />
+              </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 1.15rem;">
               <label class="form-label" for="edit-branch-code">Branch Acronym / Code</label>
-              <input
-                type="text"
-                id="edit-branch-code"
-                class="auth-input"
-                style="text-transform: uppercase;"
-                maxlength="12"
-              />
+              <div class="input-wrapper">
+                <span class="input-icon">${icon('Tag', 16)}</span>
+                <input
+                  type="text"
+                  id="edit-branch-code"
+                  class="auth-input"
+                  style="text-transform: uppercase;"
+                  maxlength="12"
+                />
+              </div>
             </div>
 
             <div class="form-group" style="margin-bottom: 1.25rem;">
               <label class="form-label" for="edit-branch-desc">Description</label>
-              <textarea
-                id="edit-branch-desc"
-                class="auth-input"
-                rows="3"
-                style="resize: vertical; min-height: 75px;"
-              ></textarea>
+              <div class="input-wrapper" style="align-items: flex-start;">
+                <span class="input-icon" style="margin-top: 0.8rem;">${icon('FileText', 16)}</span>
+                <textarea
+                  id="edit-branch-desc"
+                  class="auth-input"
+                  rows="3"
+                  style="resize: vertical; min-height: 80px; padding-top: 0.75rem;"
+                ></textarea>
+              </div>
             </div>
 
-            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 0.75rem 0.95rem; margin-bottom: 1.25rem; font-size: 0.82rem; color: #1e40af; display: flex; align-items: flex-start; gap: 0.5rem;">
-              <span style="flex-shrink: 0; margin-top: 1px;">${icon('Info', 15)}</span>
-              <span><strong>Realtime Database Sync:</strong> Updating this branch name will automatically update enrolled students' records seamlessly.</span>
+            <div class="branch-modal-sync-info">
+              <span class="sync-info-icon">${icon('Info', 16)}</span>
+              <div class="sync-info-text">
+                <strong>Realtime Database Sync:</strong> Updating this branch name will automatically update enrolled students' records seamlessly in Turso DB.
+              </div>
             </div>
 
             <div class="modal-actions-row">
@@ -3709,39 +3736,39 @@ export function renderAdminDashboardView(
 
     tbody.innerHTML = filtered.map(b => {
       const codePill = b.code
-        ? `<span class="count-pill-modern" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.05em;">${escapeHtml(b.code)}</span>`
+        ? `<span class="branch-code-badge">${escapeHtml(b.code)}</span>`
         : `<span style="color: var(--text-muted); font-size: 0.85rem;">—</span>`;
 
       const studentCountBadge = (b.studentCount || 0) > 0
-        ? `<span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: 999px; background: #ecfeff; color: #0e7490; font-weight: 800; font-size: 0.82rem; border: 1px solid #cffafe;">${icon('Users', 12)} ${b.studentCount.toLocaleString()}</span>`
-        : `<span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: 999px; background: #f8fafc; color: #94a3b8; font-weight: 600; font-size: 0.82rem; border: 1px solid #e2e8f0;">0 students</span>`;
+        ? `<span class="branch-student-pill has-students">${icon('Users', 12)} ${b.studentCount.toLocaleString()}</span>`
+        : `<span class="branch-student-pill zero-students">0 students</span>`;
 
       return `
         <tr data-branch-id="${b.id}">
           <td>
-            <div style="display: flex; align-items: center; gap: 0.75rem;">
-              <div style="width: 38px; height: 38px; border-radius: 10px; background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1.5px solid #e0e7ff;">
+            <div style="display: flex; align-items: center; gap: 0.85rem;">
+              <div class="branch-avatar-icon">
                 ${icon('GraduationCap', 18)}
               </div>
               <div>
                 <div style="font-weight: 800; color: var(--text-main); font-size: 0.95rem;">${escapeHtml(b.name)}</div>
-                <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">ID: <code>${escapeHtml(b.id)}</code></div>
+                <div style="font-size: 0.74rem; color: var(--text-muted); margin-top: 2px;">ID: <code>${escapeHtml(b.id)}</code></div>
               </div>
             </div>
           </td>
           <td>${codePill}</td>
           <td>
-            <span style="font-size: 0.85rem; color: #475569; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4;">
+            <span style="font-size: 0.85rem; color: #475569; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.45;">
               ${escapeHtml(b.description || 'Standard Engineering Curriculum & Training')}
             </span>
           </td>
           <td style="text-align: center;">${studentCountBadge}</td>
           <td style="text-align: right;">
             <div class="admin-row-actions">
-              <button class="btn-action-view btn-branch-edit" data-id="${b.id}" title="Edit ${escapeHtml(b.name)}">
+              <button class="btn-branch-edit" data-id="${b.id}" title="Edit ${escapeHtml(b.name)}">
                 ${icon('Edit3', 13)} Edit
               </button>
-              <button class="btn-action-delete btn-branch-delete" data-id="${b.id}" data-name="${escapeHtml(b.name)}" data-count="${b.studentCount || 0}" title="Delete ${escapeHtml(b.name)}">
+              <button class="btn-branch-delete" data-id="${b.id}" data-name="${escapeHtml(b.name)}" data-count="${b.studentCount || 0}" title="Delete ${escapeHtml(b.name)}">
                 ${icon('Trash2', 13)} Delete
               </button>
             </div>

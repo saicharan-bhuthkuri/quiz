@@ -1,6 +1,6 @@
 # ⚡ Engiverse — Competitive Engineering Quiz & Live Multiplayer Arena
 
-> A state-of-the-art competitive quiz and live arena platform built for engineering students and professionals across Computer Science, Electronics, AI & Data Science, Mechanical, Civil, Aerospace, and Electrical disciplines.
+> A state-of-the-art competitive quiz and live arena platform built for engineering students and professionals across Computer Science, AI & Machine Learning, Embedded Systems & VLSI, Robotics, Cloud Systems, and Frontier Quantum Technologies.
 
 ---
 
@@ -9,17 +9,19 @@
 **Engiverse** connects engineering students and practitioners with daily challenges, real-time multiplayer competitions, synchronized exam broadcasts, and platform rankings powered by **Turso Cloud Database (LibSQL)** and high-frequency **WebSockets**.
 
 ### Key Highlights
-- 🏆 **Synchronized Live Arena**: Real-time multi-participant competitive quiz sessions driven by a WebSocket orchestrator.
+- 🏆 **Synchronized Live Arena**: Real-time multi-participant competitive quiz sessions driven by a WebSocket orchestrator with millisecond timer accuracy.
 - ⚡ **Real-Time Exam Control Room**: Admin host console to launch events, broadcast questions in lockstep, enforce countdown timers, and pause/resume exams.
 - 📊 **Dynamic Live Scoreboard & Podium**: Instant leaderboard rankings with streak multipliers, XP tracking, and CSV export.
-- 🛡️ **Comprehensive Admin Portal**:
+- 🛡️ **Role-Based Access Control (RBAC) Admin Portal**:
+  - **Strict Multi-Tier Authorization**: Only verified **Admin** and **Super Admin** accounts can access the dashboard. Unauthorized roles and participants are denied and redirected.
+  - **Cryptographic Security**: HMAC-SHA256 session tokens with constant-time verification, active database validation, and server-side RBAC middleware.
+  - **Dynamic Branch Management**: Dedicated UI allowing Admins and Super Admins to create, edit, and safely delete engineering disciplines with automatic student reassignment.
+  - **Dynamic Event & Question Bank**: Zero hard-coded events or questions — all content is dynamically authored, stored in Turso DB, and updated live without server restarts.
   - **Slide Bar Navigation**: Collapsible responsive navigation drawer for desktop and mobile.
-  - **Users Directory**: Search, branch/year filters, streak, and XP analytics.
-  - **Admin & Superadmin Management**: Role-based access control with secure bcrypt authentication.
-  - **Integrated Event Operations**: Unified **Add & Remove Events** hub with live preview and permanent deletion safety controls.
-  - **Participant Management & Question Sets**: Per-event question ordering, points, custom timers, and direct participant enrollment.
-- 📚 **Daily Engineering Quizzes**: Rapid self-assessment quizzes across all engineering branches with instant scorecards and Turso DB attempt logging.
-- 💎 **Cyber-Glassmorphism UI**: High-fidelity modern interface built with Vanilla CSS design tokens, smooth animations, and sound effects.
+  - **Users & Admin Management**: Search, discipline/year filters, streak, and XP analytics. Super Admins provision and revoke admin privileges.
+- 📡 **24/7 Platform Uptime & Observability**: Integrated UptimeRobot monitor console with live latency charts, heartbeat diagnostics, and monitor controls.
+- 📚 **Dynamic Daily Engineering Quizzes**: Self-assessment challenges across engineering realms with instant scorecards and persistent attempt tracking.
+- 💎 **Cyber-Glassmorphism UI**: High-fidelity modern interface built with Vanilla CSS design tokens, smooth animations, procedural sound synthesis, and celebratory confetti.
 
 ---
 
@@ -27,18 +29,19 @@
 
 ### Frontend
 - **Language & Runtime**: TypeScript, Vite 5
-- **Styling**: Vanilla CSS (Tailored Design Tokens, Glassmorphism, Micro-animations)
+- **Styling**: Vanilla CSS (Tailored Design Tokens, Cyber-Glassmorphism, Micro-animations)
 - **Icons**: Lucide Icons
-- **Audio Engine**: Web Audio API Sound Effects Synthesizer
+- **Audio Engine**: Web Audio API Procedural Sound Synthesizer
 - **Database Client**: `@libsql/client/web` (Direct Turso Cloud DB client fallback)
-- **Real-Time**: Native WebSocket client (`wsClient`)
+- **Real-Time**: Native WebSocket client (`wsClient`) with automatic reconnection and state syncing
 
 ### Backend
 - **Runtime**: Node.js, TypeScript, TSX Watcher
 - **Server Framework**: Express 4
-- **Real-Time Engine**: WebSocket (`ws`) Server (`/ws`)
-- **Database**: Turso Cloud Database (`@libsql/client`)
-- **Security**: Bcrypt password hashing, CORS, environment isolation
+- **Security & RBAC**: HMAC-SHA256 signed admin tokens, Zod schema validation, Bcrypt password hashing, sliding-window rate limiters, centralized error handler
+- **Real-Time Engine**: WebSocket (`ws`) Server (`/ws`) with admin command authorization
+- **Database**: Turso Cloud Database (`@libsql/client` with LibSQL SQLite engine)
+- **Monitoring**: UptimeRobot REST API integration for 24/7 ping and service health observability
 
 ---
 
@@ -48,50 +51,83 @@
 quiz/
 ├── backend/
 │   ├── src/
-│   │   ├── db.ts               # Turso database initialization, schema & seeders
-│   │   ├── realtime.ts         # WebSocket multiplayer engine & room broadcaster
-│   │   └── server.ts           # REST API endpoints & HTTP/WebSocket server
-│   ├── .env.example            # Backend environment template
+│   │   ├── middleware/
+│   │   │   ├── adminAuth.ts       # Cryptographic RBAC middleware (Admin vs Superadmin)
+│   │   │   ├── errorHandler.ts    # Centralized error handler & Request ID tracing
+│   │   │   ├── rateLimiter.ts     # IP-based sliding window rate limiter
+│   │   │   └── validate.ts        # Zod body & query parameter validator
+│   │   ├── schemas/
+│   │   │   └── index.ts           # Strict Zod schemas for all API payloads
+│   │   ├── utils/
+│   │   │   ├── adminToken.ts      # HMAC-SHA256 signing & constant-time token verification
+│   │   │   └── fileUpload.ts      # Base64 avatar processing & sanitization
+│   │   ├── db.ts                  # Turso DB initialization, schema migrations & dynamic helpers
+│   │   ├── realtime.ts            # WebSocket quiz engine, room orchestrator & host RBAC gate
+│   │   └── server.ts              # REST API routes & HTTP/WebSocket server
+│   ├── .env.example               # Backend environment template
 │   ├── package.json
 │   └── tsconfig.json
 │
 ├── frontend/
 │   ├── src/
 │   │   ├── api/
-│   │   │   └── client.ts       # Typed REST API client & response interfaces
-│   │   ├── components/         # Reusable UI components & modals
-│   │   │   ├── AudioEffects.ts # Procedural sound engine
-│   │   │   ├── Icons.ts        # Dynamic SVG icons
-│   │   │   ├── Modal.ts        # Dialogs & modals
-│   │   │   └── Toast.ts        # Notification system
+│   │   │   └── client.ts          # Typed REST API client & authenticated request headers
+│   │   ├── components/            # Reusable UI components
+│   │   │   ├── AudioEffects.ts    # Web Audio API sound synthesizer
+│   │   │   ├── Confetti.ts        # Particle physics canvas confetti
+│   │   │   ├── ConfirmDialog.ts   # Glassmorphic modal confirmation dialogs
+│   │   │   ├── DomainExplorer.ts  # Engineering realms & topic browser
+│   │   │   ├── Icons.ts           # Dynamic SVG icons
+│   │   │   ├── InteractiveQuiz.ts # Interactive quiz modal runner
+│   │   │   ├── Modal.ts           # Accessible modal controller
+│   │   │   └── Toast.ts           # Toast notifications system
 │   │   ├── db/
-│   │   │   └── turso.ts        # Direct LibSQL web client & fallbacks
+│   │   │   └── turso.ts           # LibSQL web client & user session queries
 │   │   ├── services/
-│   │   │   └── wsClient.ts     # WebSocket client with auto-reconnection
+│   │   │   └── wsClient.ts        # WebSocket client with reconnection & host token handshake
 │   │   ├── styles/
-│   │   │   ├── auth.css        # Authentication styling
-│   │   │   ├── components.css  # Component tokens & slide bar layout
-│   │   │   └── main.css        # Global CSS variables & reset
-│   │   ├── views/              # View controllers
-│   │   │   ├── AdminDashboardView.ts  # Unified Admin management portal
+│   │   │   ├── auth.css           # Authentication styling
+│   │   │   ├── components.css     # Component tokens & slide bar layout
+│   │   │   ├── main.css           # Global CSS variables & responsive grid
+│   │   │   └── tokens.css         # Color palette, shadows & typography tokens
+│   │   ├── views/                 # View controllers
+│   │   │   ├── AdminDashboardView.ts  # Unified RBAC Admin management portal
 │   │   │   ├── AdminLoginView.ts      # Secure admin gateway
-│   │   │   ├── DailyQuizView.ts       # Daily challenge quizzes
+│   │   │   ├── DailyQuizView.ts       # Dynamic daily quiz challenge tracks
 │   │   │   ├── EventsListView.ts      # Live competition listings
-│   │   │   ├── LandingView.ts         # Engiverse homepage
-│   │   │   ├── LiveEventQuizView.ts   # Participant exam room
+│   │   │   ├── LandingView.ts         # Engiverse homepage & domain showcase
+│   │   │   ├── LiveEventQuizView.ts   # Synchronized participant exam room
 │   │   │   ├── LoginView.ts           # Engineer login
-│   │   │   ├── ParticipantPortalView.ts
-│   │   │   └── RegisterView.ts        # Engineer onboarding
-│   │   ├── main.ts             # Application bootstrapping
-│   │   └── router.ts           # Client-side hash router
-│   ├── .env.example            # Frontend environment template
+│   │   │   ├── ParticipantPortalView.ts # Participant hub (Daily Quiz vs Live Events)
+│   │   │   └── RegisterView.ts        # Dynamic branch engineer registration
+│   │   ├── auth.ts                # User session management
+│   │   ├── main.ts                # Application bootstrapping
+│   │   └── router.ts              # Client-side hash router with RBAC route protection
+│   ├── .env.example               # Frontend environment template
 │   ├── index.html
 │   ├── package.json
 │   └── vite.config.ts
 │
-├── .gitignore                  # Git ignore rules for node_modules, .env & builds
-└── README.md                   # Project documentation
+├── .gitignore                     # Git ignore rules for node_modules, .env & builds
+└── README.md                      # Project documentation
 ```
+
+---
+
+## 🔐 Role-Based Access Control (RBAC) Architecture
+
+Engiverse implements end-to-end authorization enforced at the routing, WebSocket, and database layers:
+
+| Role | Access Level | Permissions |
+| :--- | :--- | :--- |
+| **Super Admin** | Full Cloud Access | Provision & revoke administrators, seed database, manage branches, author events/questions, view metrics, configure UptimeRobot, access Admin Dashboard. |
+| **Admin** | Dashboard Operations | Manage branches, author & delete events, manage questions, view student rosters, inspect real-time metrics, monitor UptimeRobot, access Admin Dashboard. *(Cannot add or remove other administrators).* |
+| **Participant** | Engineer Portal | Participate in live events, take daily quizzes, earn XP & streaks, update profile. **Strictly denied from Admin Dashboard and admin APIs.** |
+
+### Security Guarantees:
+- **Zero Frontend Rely-Only**: All admin endpoints are protected server-side with `requireAdminAuth`. Directly calling `/api/admin/*` without an HMAC-signed token returns `401 Unauthorized`.
+- **Anti-Bypass Protection**: Directly accessing `/#admin` or `/#admin-dashboard` in the browser URL bar triggers both client-side route guards and an asynchronous backend verification call (`/api/admin/verify-session`). Forged or tampered tokens are rejected, session storage is purged, and unauthorized users are immediately redirected.
+- **WebSocket Handshake Validation**: Administrative commands (`ADMIN_*`) sent through WebSockets require valid admin credentials; unauthorized connections are automatically downgraded to `PARTICIPANT`.
 
 ---
 
@@ -100,7 +136,7 @@ quiz/
 ### Prerequisites
 - [Node.js](https://nodejs.org/) (v18 or higher recommended)
 - [npm](https://www.npmjs.com/)
-- A free [Turso Database](https://turso.tech/) account (or use the configured demo database)
+- A free [Turso Database](https://turso.tech/) account (or use the configured cloud database)
 
 ---
 
@@ -122,9 +158,13 @@ PORT=5000
 TURSO_DATABASE_URL=https://your-turso-database.turso.io
 TURSO_AUTH_TOKEN=your_turso_auth_token
 
-# Admin Credentials
+# Master Admin Credentials
 ADMIN_EMAIL=saicharanbhuthkuri468@gmail.com
 ADMIN_PASSWORD=your_secure_password
+
+# UptimeRobot 24/7 Monitoring API (Optional)
+UPTIMEROBOT_API_KEY=your_uptimerobot_key
+UPTIMEROBOT_MONITOR_ID=your_monitor_id
 ```
 
 #### Frontend (`frontend/.env`)
@@ -145,7 +185,7 @@ cd backend
 npm install
 npm run dev
 ```
-> The backend server and WebSocket broadcaster will be active at `http://localhost:5000`.
+> The backend REST API and WebSocket server will run at `http://localhost:5000`.
 
 #### Start Frontend (Port 5173)
 ```bash
@@ -177,8 +217,10 @@ npm run dev
    - **Start Command**: `npm run start`
    - **Health Check Path**: `/api/health`
 5. Supply your secure credentials when prompted:
+   - `TURSO_DATABASE_URL`: Your Turso Cloud database URL
    - `TURSO_AUTH_TOKEN`: Your Turso Cloud database auth token
-   - `ADMIN_PASSWORD`: Your admin password
+   - `ADMIN_EMAIL`: Your primary superadmin email
+   - `ADMIN_PASSWORD`: Your primary admin password
 6. Click **Apply**. Render will automatically build, deploy, and provision your live backend.
 7. Copy your assigned service URL (e.g., `https://engiverse-backend.onrender.com`).
 
@@ -191,9 +233,9 @@ npm run dev
 6. Add Environment Variables:
    - `PORT`: `10000`
    - `NODE_ENV`: `production`
-   - `TURSO_DATABASE_URL`: `https://engiverse-rushanth.aws-ap-south-1.turso.io`
+   - `TURSO_DATABASE_URL`: `<your_turso_url>`
    - `TURSO_AUTH_TOKEN`: `<your_turso_token>`
-   - `ADMIN_EMAIL`: `saicharanbhuthkuri468@gmail.com`
+   - `ADMIN_EMAIL`: `<your_admin_email>`
    - `ADMIN_PASSWORD`: `<your_admin_password>`
    - `CORS_ORIGIN`: `*`
 7. Click **Create Web Service**.
@@ -218,10 +260,10 @@ This generates the optimized production bundle inside `frontend/dist/`.
 
 #### Step 3: Deploy to Firebase Hosting
 ```bash
-# 1. Login to Firebase (opens browser for Google authentication)
+# 1. Login to Firebase
 firebase login
 
-# 2. Select or create project "engiverse"
+# 2. Select project
 firebase use engiverse
 
 # 3. Deploy
@@ -238,36 +280,69 @@ Your frontend is now live at:
 
 ---
 
-## 📡 API Endpoints
+## 📡 API Reference
 
-### Health & Analytics
-- `GET /api/health` — Service health check
-- `GET /api/admin/stats` — Total registered engineers, platform XP, and top branches
+### Health & Observability
+- `GET /api/health` — Service health & uptime status
+- `GET /api/uptimerobot/monitor` — UptimeRobot real-time latency & monitor status
+- `POST /api/uptimerobot/ping` — Live endpoint connectivity test
+- `GET /api/uptimerobot/config` — `[Admin]` Retrieve monitor configuration
+- `POST /api/uptimerobot/config` — `[Admin]` Update UptimeRobot API key & monitor ID
+- `POST /api/uptimerobot/action` — `[Admin]` Pause or resume uptime monitor
 
-### Authentication & Users
+### Authentication & RBAC
 - `POST /api/auth/register` — Register a new student or engineer
-- `POST /api/auth/login` — User authentication with bcrypt
-- `POST /api/admin/login` — Secure admin gateway
-- `GET /api/admin/users` — List registered engineers from Turso DB
-- `DELETE /api/admin/users/:id` — Delete user account
-- `POST /api/admin/seed` — Seed sample engineering records
+- `POST /api/auth/login` — Student authentication with bcrypt
+- `POST /api/auth/social` — GitHub / Google social authentication
+- `POST /api/admin/login` — Secure admin login; returns signed HMAC JWT
+- `GET /api/admin/verify-session` — `[Admin]` Validate token signature, expiry, and active DB role
+- `GET /api/admin/list` — `[Admin]` List all administrators
+- `POST /api/admin/add` — `[Super Admin Only]` Provision a new Admin or Super Admin
+- `DELETE /api/admin/remove/:id` — `[Super Admin Only]` Revoke administrator access
 
-### Events & Multiplayer
-- `GET /api/events` — Retrieve all competitive events
-- `POST /api/events` — Create a new competitive event
-- `PUT /api/events/:id` — Update event configuration
-- `DELETE /api/events/:id` — Permanently delete an event
+### Branch / Discipline Management
+- `GET /api/branches` — Retrieve all active engineering branches
+- `POST /api/admin/branches` — `[Admin]` Add a new branch dynamically
+- `PUT /api/admin/branches/:id` — `[Admin]` Update branch name, code, or description
+- `DELETE /api/admin/branches/:id` — `[Admin]` Delete branch with automatic engineer reassignment
+
+### User Directory & Metrics
+- `GET /api/admin/users` — `[Admin]` List registered engineers with branch, streak, and XP
+- `DELETE /api/admin/users/:id` — `[Admin]` Remove user account
+- `GET /api/admin/stats` — `[Admin]` Aggregate platform statistics & branch distribution
+- `GET /api/admin/daily-dashboard` — `[Admin]` Daily quiz attempts & activity breakdown
+- `GET /api/admin/event-dashboard/:eventId` — `[Admin]` Live event statistics & participant scores
+
+### Dynamic Events & Questions
+- `GET /api/events` — Retrieve all active competitive events
+- `GET /api/events/:id` — Retrieve event metadata
+- `POST /api/events` — `[Admin]` Create a new dynamic event
+- `PUT /api/events/:id` — `[Admin]` Update event details
+- `DELETE /api/events/:id` — `[Admin]` Permanently delete an event
 - `GET /api/events/:id/questions` — List questions for an event
-- `POST /api/events/:id/questions` — Add question with points & timer
+- `POST /api/events/:id/questions` — `[Admin]` Add a question with options, correct answer, points & timer
+- `PUT /api/events/:id/questions/:qId` — `[Admin]` Update question content & explanations
+- `DELETE /api/events/:id/questions/:qId` — `[Admin]` Remove a question
 - `POST /api/events/:id/register` — Register participant for an event
-- `GET /api/events/:id/leaderboard` — Live synchronized scoreboard
+- `GET /api/events/:id/participants` — List registered participants
+- `DELETE /api/events/:id/participants/:userId` — `[Admin]` Unregister participant
+- `GET /api/events/:id/leaderboard` — Synchronized event leaderboard
+
+### Dynamic Quizzes & Realms
+- `GET /api/quiz/daily` — Retrieve dynamic daily quiz tracks loaded from database
+- `POST /api/daily-quiz/submit` — Submit daily quiz attempt & record XP
+- `GET /api/daily-quiz/history/:userEmail` — Retrieve user's quiz attempt history
+- `GET /api/domains` — Retrieve engineering realms, topic lists, and live question counts
+- `GET /api/leaderboard` — Platform-wide global XP leaderboard
 
 ---
 
-## 🔒 Security Best Practices
-- Environment credentials (`.env`) are strictly excluded via `.gitignore`.
-- Admin endpoints verify tokens and credentials securely.
-- Sensitive superadministrator accounts are protected from accidental deletion.
+## 🔒 Security Summary
+
+1. **Defense-in-Depth RBAC**: Route guards on the frontend combined with mandatory HMAC-SHA256 signature verification and active database checking on every administrative API endpoint.
+2. **Strict Principle of Least Privilege**: Privileged actions like provisioning other administrators are restricted solely to the `SUPERADMIN` role.
+3. **Bcrypt & Timing Safety**: Sensitive credentials hashed with salted Bcrypt (10 rounds); token comparisons use `crypto.timingSafeEqual`.
+4. **Environment Isolation**: Production tokens, database URIs, and master keys are managed via environment variables and excluded from source control.
 
 ---
 
@@ -280,4 +355,5 @@ Developed by **Sai Charan Bhuthkuri**
 ---
 
 ## 📄 License
+
 This project is open-source and available under the [MIT License](LICENSE).

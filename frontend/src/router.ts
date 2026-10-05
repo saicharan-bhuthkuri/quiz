@@ -121,7 +121,11 @@ export class AppRouter {
     } else if (this.currentView === 'events') {
       renderEventsListView(this.root, nav);
     } else if (this.currentView === 'live-event') {
-      const eventId = this.currentParams?.eventId || 'evt_eng_championship_2026';
+      const eventId = this.currentParams?.eventId;
+      if (!eventId) {
+        this.navigateTo('events');
+        return;
+      }
       renderLiveEventQuizView(this.root, { eventId, viewLeaderboardOnly: this.currentParams?.viewLeaderboardOnly }, nav);
     }
   }

@@ -26,7 +26,7 @@ export interface DomainCategory {
   activeLearners: string;
   difficulty: Difficulty;
   popularTopics: string[];
-  sampleQuestion: QuizQuestion;
+  sampleQuestion?: QuizQuestion;
 }
 
 export interface LeaderboardEntry {

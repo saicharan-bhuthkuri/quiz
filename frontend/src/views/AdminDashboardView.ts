@@ -1196,7 +1196,7 @@ export function renderAdminDashboardView(
                     <label class="form-label" for="page-event-title">Event Title</label>
                     <div class="input-wrapper">
                       <span class="input-icon">${icon('Trophy', 16)}</span>
-                      <input type="text" id="page-event-title" class="auth-input" placeholder="e.g. National Robotics &amp; AI Championship" required />
+                      <input type="text" id="page-event-title" class="auth-input" placeholder="e.g. Enter event title" required />
                     </div>
                   </div>
 
@@ -1833,7 +1833,7 @@ export function renderAdminDashboardView(
               <label class="form-label" for="new-event-title">Event Title</label>
               <div class="input-wrapper">
                 <span class="input-icon">${icon('Trophy', 16)}</span>
-                <input type="text" id="new-event-title" class="auth-input" placeholder="e.g. All-India Robotics &amp; Automation Derby" required />
+                <input type="text" id="new-event-title" class="auth-input" placeholder="e.g. Enter event title" required />
               </div>
             </div>
 
@@ -3570,7 +3570,7 @@ export function renderAdminDashboardView(
   const syncLivePreview = () => {
     if (previewTitle) {
       const val = pageTitleInput?.value.trim();
-      previewTitle.textContent = val || 'National Robotics & AI Championship 2026';
+      previewTitle.textContent = val || 'Event Title Preview';
     }
     if (previewDesc) {
       const val = pageDescInput?.value.trim();

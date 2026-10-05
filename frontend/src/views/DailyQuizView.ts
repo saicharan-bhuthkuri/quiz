@@ -22,178 +22,6 @@ interface DailyQuizCategory {
   }[];
 }
 
-const DAILY_QUIZZES: DailyQuizCategory[] = [
-  {
-    id: 'cs-arch',
-    title: 'Computer Systems & OS Architecture',
-    domain: 'Computer Science',
-    iconName: 'Laptop',
-    accent: '#4f46e5',
-    badge: 'Today’s Featured',
-    description: 'Virtual memory paging, cache coherence protocols, CPU branch prediction, and thread synchronization primitives.',
-    questions: [
-      {
-        question: 'What is the time complexity of finding a cycle in a directed graph using Kahn’s Algorithm (Topological Sort)?',
-        codeSnippet: `// Kahn's check: if processedCount !== V -> Cycle!`,
-        options: ['O(V · E)', 'O(V + E)', 'O(V log V)', 'O(E²)'],
-        correctIndex: 1,
-        explanation: 'Kahn\'s algorithm traverses each vertex once and decrements each in-degree edge once, resulting in linear O(V + E) time.',
-        xp: 120
-      },
-      {
-        question: 'In a modern multi-core processor, which cache coherence state indicates that the cache line is valid, modified, and not present in any other core\'s cache (MESI protocol)?',
-        options: ['Shared (S)', 'Invalid (I)', 'Modified (M)', 'Exclusive (E)'],
-        correctIndex: 2,
-        explanation: 'In the MESI protocol, the Modified (M) state indicates that the cache block is dirty (modified) and present only in the local core\'s cache.',
-        xp: 140
-      },
-      {
-        question: 'Which page replacement algorithm suffers from Belady’s Anomaly (where increasing page frames can increase page faults)?',
-        options: ['Least Recently Used (LRU)', 'Optimal (OPT)', 'First-In First-Out (FIFO)', 'Least Frequently Used (LFU)'],
-        correctIndex: 2,
-        explanation: 'FIFO does not belong to the class of stack algorithms, making it susceptible to Belady\'s Anomaly.',
-        xp: 130
-      },
-      {
-        question: 'What mechanism prevents Priority Inversion in real-time operating systems (RTOS)?',
-        options: ['Round-robin scheduling', 'Priority Inheritance Protocol', 'Interrupt latency masking', 'Cooperative multitasking'],
-        correctIndex: 1,
-        explanation: 'Priority Inheritance temporarily elevates the priority of a lower-priority task holding a mutex required by a higher-priority task.',
-        xp: 150
-      },
-      {
-        question: 'In x86-64 virtual memory architecture with 4-level paging (PML4), what is the page table walk depth for a 4KB page?',
-        options: ['2 levels', '3 levels', '4 levels (PML4 -> PDPT -> PD -> PT)', '5 levels'],
-        correctIndex: 2,
-        explanation: 'A 48-bit canonical virtual address uses 4 levels of 9-bit indices (PML4, PDPT, PD, PT) plus a 12-bit offset.',
-        xp: 150
-      }
-    ]
-  },
-  {
-    id: 'ai-ml',
-    title: 'AI, Deep Learning & LLM Foundations',
-    domain: 'AI & Data Science',
-    iconName: 'Brain',
-    accent: '#06b6d4',
-    badge: 'Popular Realm',
-    description: 'Multi-head attention computational complexity, backpropagation calculus, optimization mathematics, and quantization.',
-    questions: [
-      {
-        question: 'In Transformer architectures, what is the primary computational bottleneck when scaling sequence length L in standard multi-head self-attention?',
-        options: [
-          'Linear O(L · d_k) memory bottleneck',
-          'Quadratic O(L²) memory & compute cost',
-          'Exponential O(2^L) projection cost',
-          'Logarithmic O(log L) cache lookups'
-        ],
-        correctIndex: 1,
-        explanation: 'Computing the product (Q · K^T) produces an L × L attention matrix, leading to quadratic scaling in both memory and compute.',
-        xp: 140
-      },
-      {
-        question: 'Which optimizer decouples weight decay regularization from gradient-based updates, solving Adam’s L2 regularization bug?',
-        options: ['RMSprop', 'AdamW', 'Adagrad', 'Nesterov Momentum'],
-        correctIndex: 1,
-        explanation: 'AdamW decouples weight decay directly from gradient moments, preventing large gradient historical scales from suppressing regularization.',
-        xp: 150
-      },
-      {
-        question: 'In Low-Rank Adaptation (LoRA), for a pre-trained weight matrix W of size (d × k), what is the rank r constraint?',
-        options: ['r = max(d, k)', 'r << min(d, k)', 'r = d · k', 'r must equal the vocabulary size'],
-        correctIndex: 1,
-        explanation: 'LoRA freezes W and decomposes the update into B × A where B is (d × r) and A is (r × k) with r << min(d, k), reducing parameter footprint by 99%.',
-        xp: 160
-      },
-      {
-        question: 'Which sampling parameter in LLMs adjusts the sharpness of the probability distribution over tokens before applying softmax?',
-        options: ['Top-P (Nucleus)', 'Top-K', 'Temperature', 'Frequency Penalty'],
-        correctIndex: 2,
-        explanation: 'Temperature divides logits by T prior to softmax: T < 1.0 sharpens probabilities toward the mode, while T > 1.0 flattens the distribution.',
-        xp: 130
-      },
-      {
-        question: 'What is the primary advantage of FlashAttention over standard self-attention implementations in PyTorch?',
-        options: [
-          'It reduces model parameters by pruning zero weights',
-          'It tiles computation in SRAM to avoid reading/writing the N×N attention matrix to High Bandwidth Memory (HBM)',
-          'It replaces floating point math with integer addition',
-          'It uses synthetic token embeddings'
-        ],
-        correctIndex: 1,
-        explanation: 'FlashAttention is IO-aware; it tiles queries, keys, and values to compute softmax incrementally in GPU SRAM without materializing the quadratic attention matrix in HBM.',
-        xp: 170
-      }
-    ]
-  },
-  {
-    id: 'vlsi-embedded',
-    title: 'Embedded Systems & VLSI Digital Design',
-    domain: 'Electrical & VLSI',
-    iconName: 'Zap',
-    accent: '#f59e0b',
-    badge: 'Hardware Core',
-    description: 'CMOS logic switching dissipation, RISC-V pipelining hazards, static timing analysis (STA), and DMA controllers.',
-    questions: [
-      {
-        question: 'In a CMOS inverter circuit, what causes short-circuit dynamic power dissipation during logic switching?',
-        options: [
-          'Parasitic capacitance leakage to ground',
-          'Simultaneous conduction of both NMOS and PMOS during input voltage transition',
-          'Sub-threshold drain-source punch-through breakdown',
-          'Bond-wire parasitic inductance kickback'
-        ],
-        correctIndex: 1,
-        explanation: 'During the rise/fall transition of Vin, both PMOS and NMOS conduct simultaneously for a brief duration, forming a direct VDD-to-GND conductive path.',
-        xp: 130
-      },
-      {
-        question: 'In synchronous digital design, what is a Hold Time (Th) violation?',
-        options: [
-          'Data arrived and stabilized too late before the active clock edge',
-          'Data changed too quickly before the minimum hold time after the clock edge',
-          'The clock frequency exceeds the PLL lock range',
-          'Duty cycle distortion in the global buffer tree'
-        ],
-        correctIndex: 1,
-        explanation: 'Hold time requires data to remain stable for a minimum duration AFTER the active clock edge. Changing too fast violates hold time.',
-        xp: 150
-      },
-      {
-        question: 'What is the primary reason for inserting pipeline registers in a high-frequency RISC-V processor datapath?',
-        options: [
-          'Reducing total latency of an individual instruction',
-          'Shortening the critical path clock period, allowing a higher operating frequency and higher throughput',
-          'Eliminating all hazard detection hardware',
-          'Doubling register file bandwidth'
-        ],
-        correctIndex: 1,
-        explanation: 'Pipelining divides combinational delay into balanced shorter stages, allowing the clock frequency and overall throughput (instructions per second) to dramatically increase.',
-        xp: 140
-      },
-      {
-        question: 'In ARM/RISC-V embedded microcontrollers, what is the role of a Direct Memory Access (DMA) controller?',
-        options: [
-          'Translating virtual addresses to physical pages',
-          'Transferring data between peripherals and memory without CPU intervention',
-          'Emulating floating-point operations in hardware',
-          'Managing power states of the voltage regulator'
-        ],
-        correctIndex: 1,
-        explanation: 'DMA offloads bulk memory copies between I/O peripherals and RAM from the CPU core, freeing the CPU to perform computation.',
-        xp: 130
-      },
-      {
-        question: 'Which digital bus protocol uses 2 bidirectional open-drain lines (SDA and SCL) with pull-up resistors and supports multi-master arbitration?',
-        options: ['SPI', 'UART', 'I2C', 'CAN Bus'],
-        correctIndex: 2,
-        explanation: 'I2C uses 2 open-drain lines (Serial Data and Serial Clock) with pull-up resistors and address-based wired-AND arbitration.',
-        xp: 140
-      }
-    ]
-  }
-];
-
 export function renderDailyQuizView(
   container: HTMLElement,
   onNavigate: (view: string) => void
@@ -214,18 +42,26 @@ export function renderDailyQuizView(
   let timerInterval: ReturnType<typeof setInterval> | null = null;
   let remainingSeconds = 45;
 
-  let categories: DailyQuizCategory[] = DAILY_QUIZZES;
+  let categories: DailyQuizCategory[] = [];
+  let isLoading = true;
 
   apiGetDailyQuizzes()
     .then(res => {
-      if (res && res.success && Array.isArray(res.categories) && res.categories.length > 0) {
+      isLoading = false;
+      if (res && res.success && Array.isArray(res.categories)) {
         categories = res.categories;
-        if (!activeCategory) {
-          renderCategorySelector();
-        }
+      }
+      if (!activeCategory) {
+        renderCategorySelector();
       }
     })
-    .catch(err => console.warn('Dynamic daily quizzes fetch:', err));
+    .catch(err => {
+      isLoading = false;
+      console.warn('Dynamic daily quizzes fetch error:', err);
+      if (!activeCategory) {
+        renderCategorySelector();
+      }
+    });
 
   function renderCategorySelector() {
     container.innerHTML = `
@@ -266,7 +102,23 @@ export function renderDailyQuizView(
           </div>
 
           <div class="daily-categories-grid">
-            ${categories.map((cat, i) => `
+            ${
+              isLoading
+                ? `
+                  <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem;">
+                    <div class="admin-loading-spinner" style="margin: 0 auto 1rem;"></div>
+                    <span style="color: var(--text-muted); font-size: 0.95rem;">Loading daily quizzes from database...</span>
+                  </div>
+                `
+                : categories.length === 0
+                ? `
+                  <div style="grid-column: 1 / -1; text-align: center; padding: 4rem 2rem;">
+                    <span style="font-size: 2.5rem; display: block; margin-bottom: 1rem;">🎯</span>
+                    <h3 style="font-size: 1.25rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main);">No Daily Quizzes Available</h3>
+                    <p style="color: var(--text-muted); max-width: 480px; margin: 0 auto 1.5rem;">There are currently no active quiz challenges in the database. Quizzes and questions are loaded dynamically once created by an administrator.</p>
+                  </div>
+                `
+                : categories.map((cat, i) => `
               <div class="daily-cat-card" data-index="${i}">
                 <div class="cat-card-header">
                   <div class="cat-icon-badge" style="background: ${cat.accent}15; color: ${cat.accent};">
@@ -278,8 +130,8 @@ export function renderDailyQuizView(
                 <p class="cat-card-desc">${cat.description}</p>
                 <div class="cat-meta-row">
                   <span class="meta-item">${icon('CheckCircle2', 13)} ${cat.questions.length} Questions</span>
-                  <span class="meta-item">${icon('Zap', 13)} ~700 Max XP</span>
-                  <span class="meta-item">${icon('Clock', 13)} ~4 Mins</span>
+                  <span class="meta-item">${icon('Zap', 13)} ~${cat.questions.length * 100} XP</span>
+                  <span class="meta-item">${icon('Clock', 13)} ~${Math.ceil(cat.questions.length * 0.75)} Mins</span>
                 </div>
                 <button class="btn btn-primary btn-pill btn-start-cat" data-index="${i}" style="width: 100%; justify-content: center; margin-top: 1.25rem;">
                   <span>Start Quiz Challenge</span>

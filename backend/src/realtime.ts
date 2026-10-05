@@ -450,9 +450,6 @@ class RealtimeQuizEngine {
         // Ensure questions are ready
         if (state.questions.length === 0) {
           await this.reloadEventQuestions(eventId);
-          if (state.questions.length === 0) {
-            await this.seedDefaultQuestionsForEvent(eventId);
-          }
         }
 
         state.status = 'EVENT_STARTED_WAITING_QUESTION';
@@ -488,9 +485,18 @@ class RealtimeQuizEngine {
         // Ensure questions are ready and loaded
         if (state.questions.length === 0) {
           await this.reloadEventQuestions(eventId);
-          if (state.questions.length === 0) {
-            await this.seedDefaultQuestionsForEvent(eventId);
-          }
+        }
+
+        if (state.questions.length === 0) {
+          console.warn(`[Realtime Engine] Cannot send question: Event ${eventId} has no questions configured.`);
+          this.broadcastAll({
+            type: 'EVENT_NOTIFICATION',
+            payload: {
+              eventId,
+              message: 'No questions configured for this event. Please add questions first.'
+            }
+          });
+          return;
         }
 
         let qIdx = questionIndex !== undefined ? questionIndex : state.currentQuestionIndex + 1;
@@ -921,61 +927,6 @@ class RealtimeQuizEngine {
       return questions;
     } catch (err) {
       console.error('[Realtime Engine] Failed to reload event questions:', err);
-      return [];
-    }
-  }
-
-  // Auto-seed default engineering questions if an event was created with 0 questions
-  public async seedDefaultQuestionsForEvent(eventId: string): Promise<EventQuestionData[]> {
-    try {
-      const defaults = [
-        {
-          id: `q_${eventId}_1`,
-          event_id: eventId,
-          question_text: 'What is the average-case time complexity of Kahn’s Algorithm for Topological Sorting?',
-          options: ['O(V + E)', 'O(V²)', 'O(V log V)', 'O(E log E)'],
-          correct_option: 0,
-          explanation: 'Kahn\'s algorithm processes each vertex and edge once using an in-degree queue, running in linear O(V + E) time.',
-          points: 100,
-          timer_seconds: 30,
-          question_order: 1
-        },
-        {
-          id: `q_${eventId}_2`,
-          event_id: eventId,
-          question_text: 'Which transport layer protocol provides connection-oriented, reliable and ordered byte-stream delivery?',
-          options: ['UDP', 'ICMP', 'TCP', 'IP'],
-          correct_option: 2,
-          explanation: 'TCP guarantees reliable and ordered data delivery through sequence numbers, acknowledgments, and flow control.',
-          points: 100,
-          timer_seconds: 30,
-          question_order: 2
-        },
-        {
-          id: `q_${eventId}_3`,
-          event_id: eventId,
-          question_text: 'Which data structure is fundamentally utilized to implement Breadth-First Search (BFS)?',
-          options: ['Stack', 'Queue', 'Priority Queue', 'Disjoint Set'],
-          correct_option: 1,
-          explanation: 'BFS explores graph vertices level-by-level using a FIFO Queue.',
-          points: 100,
-          timer_seconds: 30,
-          question_order: 3
-        }
-      ];
-
-      for (const q of defaults) {
-        await db.execute({
-          sql: `INSERT OR IGNORE INTO event_questions (id, event_id, question_text, options_json, correct_option, explanation, points, timer_seconds, question_order, created_at)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, datetime('now'));`,
-          args: [q.id, q.event_id, q.question_text, JSON.stringify(q.options), q.correct_option, q.explanation, q.points, q.timer_seconds, q.question_order]
-        });
-      }
-
-      console.log(`[Realtime Engine] Automatically seeded 3 default questions for event ${eventId}`);
-      return await this.reloadEventQuestions(eventId);
-    } catch (err) {
-      console.error('[Realtime Engine] Auto-seed questions error:', err);
       return [];
     }
   }

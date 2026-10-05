@@ -19,13 +19,13 @@ export class DomainExplorer {
     apiGetDomains()
       .then(res => {
         if (res && res.success && Array.isArray(res.domains) && res.domains.length > 0) {
-          // Merge dynamic counts with sample questions
+          // Merge dynamic counts with dynamic sample questions
           this.domains = res.domains.map((d: any) => {
             const fallback = domainCategories.find(dc => dc.id === d.id);
             return {
               ...fallback,
               ...d,
-              sampleQuestion: fallback?.sampleQuestion || d.sampleQuestion
+              sampleQuestion: d.sampleQuestion || undefined
             };
           });
           this.render();
@@ -153,9 +153,13 @@ export class DomainExplorer {
     previewButtons.forEach(btn => {
       btn.addEventListener('click', () => {
         const domainId = btn.getAttribute('data-preview-id');
-        const domain = domainCategories.find(d => d.id === domainId);
+        const domain = this.domains.find(d => d.id === domainId);
         if (domain) {
-          modalManager.openDomainPreview(domain.sampleQuestion, domain.name);
+          if (domain.sampleQuestion) {
+            modalManager.openDomainPreview(domain.sampleQuestion, domain.name);
+          } else {
+            modalManager.openEmptyPreview(domain.name);
+          }
         }
       });
     });

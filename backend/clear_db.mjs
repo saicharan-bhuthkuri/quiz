@@ -26,23 +26,10 @@ async function clearDatabase() {
     console.log('🧹 Clearing event_registrations...');
     await db.execute('DELETE FROM event_registrations;');
 
-    // 4. Delete test events created during testing
-    console.log('🧹 Deleting temporary test events and their questions...');
-    await db.execute(`
-      DELETE FROM event_questions 
-      WHERE event_id NOT IN ('evt_eng_championship_2026', 'evt_silicon_circuits_live');
-    `);
-    await db.execute(`
-      DELETE FROM events 
-      WHERE id NOT IN ('evt_eng_championship_2026', 'evt_silicon_circuits_live');
-    `);
-
-    // 5. Reset official events back to clean UPCOMING state
-    console.log('🔄 Resetting official events to UPCOMING with clean question index...');
-    await db.execute(`
-      UPDATE events 
-      SET status = 'UPCOMING', current_question_index = -1;
-    `);
+    // 4. Clear all events and questions
+    console.log('🧹 Clearing events and questions...');
+    await db.execute('DELETE FROM event_questions;');
+    await db.execute('DELETE FROM events;');
 
     // 6. Reset user stats to clean defaults while keeping login credentials
     console.log('🔄 Resetting user streaks and XP to clean baseline...');

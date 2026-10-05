@@ -110,6 +110,34 @@ export class ModalManager {
     document.body.style.overflow = 'hidden';
   }
 
+  public openEmptyPreview(domainName: string): void {
+    soundEngine.playClick();
+    if (!this.modalOverlay) this.createModalStructure();
+    if (!this.modalOverlay) return;
+
+    const eyebrow = this.modalOverlay.querySelector('#modal-eyebrow');
+    const title = this.modalOverlay.querySelector('#modal-title');
+    const content = this.modalOverlay.querySelector('#modal-content');
+
+    if (eyebrow) eyebrow.textContent = `${domainName} • Domain Challenge`;
+    if (title) title.textContent = `Featured Engineering Challenge`;
+
+    if (content) {
+      content.innerHTML = `
+        <div class="modal-challenge-card" style="text-align: center; padding: 2.5rem 1.5rem;">
+          <div style="font-size: 2.2rem; margin-bottom: 0.75rem;">💡</div>
+          <h4 class="challenge-q-text" style="font-size: 1.1rem; margin-bottom: 0.5rem;">Dynamic Question Repository</h4>
+          <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5;">
+            Questions are loaded dynamically from the live database. Create and manage event questions in the Admin Console to preview domain-specific challenges.
+          </p>
+        </div>
+      `;
+    }
+
+    this.modalOverlay.classList.remove('hidden');
+    document.body.style.overflow = 'hidden';
+  }
+
   public close(): void {
     if (!this.modalOverlay) return;
     this.modalOverlay.classList.add('hidden');

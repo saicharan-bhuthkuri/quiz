@@ -1,4 +1,3 @@
-import { heroQuizQuestions } from '../data/quizData.ts';
 import { QuizQuestion } from '../types/index.ts';
 import { soundEngine } from './AudioEffects.ts';
 import { launchConfetti } from './Confetti.ts';
@@ -10,7 +9,8 @@ import { apiGetDiagnosticQuestions } from '../api/client.ts';
 
 export class InteractiveHeroQuiz {
   private container: HTMLElement;
-  private questions: QuizQuestion[] = heroQuizQuestions.slice(0, 3);
+  private questions: QuizQuestion[] = [];
+  private isLoading: boolean = true;
   private currentIndex: number = 0;
   private userScore: number = 0;
   private totalXP: number = 0;
@@ -28,12 +28,17 @@ export class InteractiveHeroQuiz {
 
     apiGetDiagnosticQuestions()
       .then(res => {
-        if (res && res.success && Array.isArray(res.questions) && res.questions.length > 0) {
+        this.isLoading = false;
+        if (res && res.success && Array.isArray(res.questions)) {
           this.questions = res.questions;
-          this.render();
         }
+        this.render();
       })
-      .catch(err => console.warn('Dynamic diagnostic questions fetch error:', err));
+      .catch(err => {
+        this.isLoading = false;
+        console.warn('Dynamic diagnostic questions fetch error:', err);
+        this.render();
+      });
   }
 
   private startTimer(): void {
@@ -212,6 +217,31 @@ export class InteractiveHeroQuiz {
   }
 
   private renderQuestion(): void {
+    if (this.isLoading) {
+      this.container.innerHTML = `
+        <div class="hero-quiz-card" style="text-align: center; padding: 3.5rem 2rem;">
+          <div class="admin-loading-spinner" style="margin: 0 auto 1rem;"></div>
+          <span style="color: var(--text-muted); font-size: 0.95rem; display: block;">
+            Loading live diagnostic challenge from database...
+          </span>
+        </div>
+      `;
+      return;
+    }
+
+    if (this.questions.length === 0) {
+      this.container.innerHTML = `
+        <div class="hero-quiz-card" style="text-align: center; padding: 3rem 2rem;">
+          <div style="font-size: 2.5rem; margin-bottom: 0.75rem;">⚡</div>
+          <h3 style="font-size: 1.2rem; font-weight: 700; margin-bottom: 0.5rem; color: var(--text-main);">Engineering Arena Ready</h3>
+          <p style="color: var(--text-muted); font-size: 0.9rem; line-height: 1.5; max-width: 400px; margin: 0 auto 1.5rem;">
+            Questions are loaded dynamically from the live database. Create events and questions in the Admin Console to launch real-time challenges.
+          </p>
+        </div>
+      `;
+      return;
+    }
+
     const currentQ = this.questions[this.currentIndex];
     const progressPercent = ((this.currentIndex + 1) / this.questions.length) * 100;
 

@@ -118,6 +118,7 @@ export function renderAdminLoginView(
         sessionStorage.setItem('engiverse_admin_token', res.admin.token);
         sessionStorage.setItem('engiverse_admin_email', res.admin.email);
         sessionStorage.setItem('engiverse_admin_name', res.admin.name);
+        sessionStorage.setItem('engiverse_admin_role', res.admin.role || 'ADMIN');
         soundEngine.playCorrect();
         showToast('Admin access granted! Loading dashboard...', 'success');
         setTimeout(() => onNavigate('admin-dashboard'), 700);

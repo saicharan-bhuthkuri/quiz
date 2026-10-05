@@ -35,7 +35,12 @@ import {
   apiPingEndpoint,
   apiControlUptimeRobotMonitor,
   UptimeRobotData,
-  UptimeRobotConfigInfo
+  UptimeRobotConfigInfo,
+  apiGetBranches,
+  apiAddBranch,
+  apiUpdateBranch,
+  apiDeleteBranch,
+  BranchRecord
 } from '../api/client.ts';
 import { soundEngine } from '../components/AudioEffects.ts';
 import { showToast } from '../components/Toast.ts';
@@ -108,6 +113,12 @@ export function renderAdminDashboardView(
             <span class="nav-btn-icon">${icon('Shield', 16)}</span>
             <span class="nav-btn-text">List of Admins</span>
             <span class="nav-count-badge" id="badge-admins-count">0</span>
+          </button>
+
+          <button class="sidebar-nav-btn" id="tab-btn-branches" data-tab="branches">
+            <span class="nav-btn-icon">${icon('GraduationCap', 16)}</span>
+            <span class="nav-btn-text">Branch Management</span>
+            <span class="nav-count-badge" id="badge-branches-count">0</span>
           </button>
 
           <!-- Sleek Section Divider -->
@@ -579,6 +590,110 @@ export function renderAdminDashboardView(
               <div class="admin-table-footer">
                 <span id="admin-count-label" class="admin-table-count-text">Authorized admin staff</span>
                 <span class="admin-quick-legend">${icon('Lock', 14)} Primary Superadministrator (<code>${escapeHtml(currentAdminEmail)}</code>) is protected.</span>
+              </div>
+            </div>
+          </section>
+
+          <!-- ================= TAB: BRANCH MANAGEMENT ================= -->
+          <section id="view-branches-tab" class="admin-tab-section" style="display: none;">
+            <div class="admin-section-header">
+              <div class="header-split-row">
+                <div>
+                  <div class="title-with-pill">
+                    <h1 class="admin-view-heading">Branch Management</h1>
+                    <span class="count-pill-modern" id="branches-view-count">0 Branches</span>
+                  </div>
+                  <p class="admin-view-desc">Configure and manage engineering disciplines dynamically in Turso Database. Changes are immediately saved and reflected across student registration, filters, and reports.</p>
+                </div>
+                <button id="btn-open-add-branch-modal" class="btn btn-primary btn-pill">
+                  <span>${icon('Plus', 15)} Add New Branch</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Branch Summary Metrics Grid -->
+            <div class="admin-metrics-grid" style="margin-bottom: 1.5rem;">
+              <div class="admin-stat-card">
+                <div class="stat-icon-wrap" style="background: #eef2ff; color: #4f46e5;">${icon('GraduationCap', 22)}</div>
+                <div class="stat-meta">
+                  <span class="stat-val" id="metric-total-branches">0</span>
+                  <span class="stat-title">Active Disciplines</span>
+                  <span class="stat-sub">Configured in Turso DB</span>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="stat-icon-wrap" style="background: #ecfeff; color: #0891b2;">${icon('Users', 22)}</div>
+                <div class="stat-meta">
+                  <span class="stat-val" id="metric-branch-students">0</span>
+                  <span class="stat-title">Enrolled Students</span>
+                  <span class="stat-sub">Across all branches</span>
+                </div>
+              </div>
+
+              <div class="admin-stat-card">
+                <div class="stat-icon-wrap" style="background: #ecfdf5; color: #059669;">${icon('Award', 22)}</div>
+                <div class="stat-meta">
+                  <span class="stat-val" id="metric-branch-leading">—</span>
+                  <span class="stat-title">Leading Branch</span>
+                  <span class="stat-sub">Top student enrollment</span>
+                </div>
+              </div>
+            </div>
+
+            <!-- Branches Table Container -->
+            <div class="admin-table-container">
+              <!-- Search & Filter Toolbar -->
+              <div class="admin-toolbar">
+                <div class="admin-search-wrapper">
+                  <span class="search-icon">${icon('Search', 15)}</span>
+                  <input
+                    type="text"
+                    id="branches-search-input"
+                    class="admin-search-field"
+                    placeholder="Search branches by name, code, or description..."
+                  />
+                </div>
+
+                <div class="admin-filters-group">
+                  <select id="branches-sort-by" class="admin-select-filter">
+                    <option value="name-asc">Sort: Name (A-Z)</option>
+                    <option value="name-desc">Sort: Name (Z-A)</option>
+                    <option value="students-desc">Sort: Most Students</option>
+                    <option value="newest">Sort: Newest First</option>
+                  </select>
+
+                  <button id="btn-branches-refresh" class="admin-toolbar-btn btn-refresh-records" title="Refresh branches from Turso database">
+                    <span class="toolbar-btn-icon">${icon('RotateCw', 14)}</span>
+                    <span>Refresh Branches</span>
+                  </button>
+                </div>
+              </div>
+
+              <div class="table-responsive">
+                <table class="admin-users-table">
+                  <thead>
+                    <tr>
+                      <th style="width: 28%;">Branch Name</th>
+                      <th style="width: 14%;">Code</th>
+                      <th style="width: 32%;">Description</th>
+                      <th style="width: 13%; text-align: center;">Enrolled Students</th>
+                      <th style="width: 13%; text-align: right;">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody id="branch-list-tbody">
+                    <tr>
+                      <td colspan="5" style="text-align: center; padding: 4rem 2rem;">
+                        <div class="admin-loading-spinner"></div>
+                        <span style="color: var(--text-muted); font-size: 0.95rem; margin-top: 0.5rem; display: block;">Loading branches from database...</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+              <div class="admin-table-footer">
+                <span id="branches-count-label" class="admin-table-count-text">Dynamic engineering disciplines</span>
+                <span class="admin-quick-legend">${icon('ShieldCheck', 14)} Super Admin &amp; Admin authorized to add, edit, and remove branches.</span>
               </div>
             </div>
           </section>
@@ -2132,6 +2247,135 @@ export function renderAdminDashboardView(
           </form>
         </div>
       </div>
+
+      <!-- Add Branch Modal -->
+      <div id="admin-add-branch-modal" class="admin-modal-backdrop" style="display: none;">
+        <div class="admin-modal-card">
+          <div class="admin-modal-header">
+            <div class="modal-title-with-badge">
+              <span class="modal-badge-chip">${icon('GraduationCap', 14)} CREATE DISCIPLINE</span>
+              <h2 class="admin-modal-title">Add New Engineering Branch</h2>
+            </div>
+            <button id="btn-close-add-branch-modal" class="btn-close-modal" aria-label="Close dialog">
+              ${icon('X', 18)}
+            </button>
+          </div>
+
+          <form id="form-add-branch" class="admin-modal-form">
+            <div class="form-group" style="margin-bottom: 1.15rem;">
+              <label class="form-label" for="add-branch-name">Branch Full Name <span style="color: #ef4444;">*</span></label>
+              <input
+                type="text"
+                id="add-branch-name"
+                class="auth-input"
+                placeholder="e.g. Biomedical Engineering, Robotics & Automation"
+                required
+                minlength="2"
+              />
+              <span style="font-size: 0.76rem; color: var(--text-muted); margin-top: 0.3rem; display: block;">
+                Full formal engineering branch title displayed in registration and user profiles.
+              </span>
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.15rem;">
+              <label class="form-label" for="add-branch-code">Branch Acronym / Code <span style="color: var(--text-muted); font-size: 0.75rem;">(Optional)</span></label>
+              <input
+                type="text"
+                id="add-branch-code"
+                class="auth-input"
+                placeholder="e.g. BME, ROBO, CSE"
+                style="text-transform: uppercase;"
+                maxlength="12"
+              />
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.5rem;">
+              <label class="form-label" for="add-branch-desc">Description / Focus Areas <span style="color: var(--text-muted); font-size: 0.75rem;">(Optional)</span></label>
+              <textarea
+                id="add-branch-desc"
+                class="auth-input"
+                rows="3"
+                placeholder="Core topics, subject scope, and focus areas..."
+                style="resize: vertical; min-height: 75px;"
+              ></textarea>
+            </div>
+
+            <div class="modal-actions-row">
+              <button type="button" id="btn-cancel-add-branch" class="btn btn-secondary btn-pill">
+                <span>Cancel</span>
+              </button>
+              <button type="submit" id="btn-submit-add-branch" class="btn btn-primary btn-pill">
+                <span>${icon('Plus', 14)} Add Branch</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
+
+      <!-- Edit Branch Modal -->
+      <div id="admin-edit-branch-modal" class="admin-modal-backdrop" style="display: none;">
+        <div class="admin-modal-card">
+          <div class="admin-modal-header">
+            <div class="modal-title-with-badge">
+              <span class="modal-badge-chip">${icon('Edit3', 14)} UPDATE DISCIPLINE</span>
+              <h2 class="admin-modal-title">Edit Engineering Branch</h2>
+            </div>
+            <button id="btn-close-edit-branch-modal" class="btn-close-modal" aria-label="Close dialog">
+              ${icon('X', 18)}
+            </button>
+          </div>
+
+          <form id="form-edit-branch" class="admin-modal-form">
+            <input type="hidden" id="edit-branch-id" value="" />
+
+            <div class="form-group" style="margin-bottom: 1.15rem;">
+              <label class="form-label" for="edit-branch-name">Branch Full Name <span style="color: #ef4444;">*</span></label>
+              <input
+                type="text"
+                id="edit-branch-name"
+                class="auth-input"
+                required
+                minlength="2"
+              />
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.15rem;">
+              <label class="form-label" for="edit-branch-code">Branch Acronym / Code</label>
+              <input
+                type="text"
+                id="edit-branch-code"
+                class="auth-input"
+                style="text-transform: uppercase;"
+                maxlength="12"
+              />
+            </div>
+
+            <div class="form-group" style="margin-bottom: 1.25rem;">
+              <label class="form-label" for="edit-branch-desc">Description</label>
+              <textarea
+                id="edit-branch-desc"
+                class="auth-input"
+                rows="3"
+                style="resize: vertical; min-height: 75px;"
+              ></textarea>
+            </div>
+
+            <div style="background: #eff6ff; border: 1px solid #bfdbfe; border-radius: var(--radius-md); padding: 0.75rem 0.95rem; margin-bottom: 1.25rem; font-size: 0.82rem; color: #1e40af; display: flex; align-items: flex-start; gap: 0.5rem;">
+              <span style="flex-shrink: 0; margin-top: 1px;">${icon('Info', 15)}</span>
+              <span><strong>Realtime Database Sync:</strong> Updating this branch name will automatically update enrolled students' records seamlessly.</span>
+            </div>
+
+            <div class="modal-actions-row">
+              <button type="button" id="btn-cancel-edit-branch" class="btn btn-secondary btn-pill">
+                <span>Cancel</span>
+              </button>
+              <button type="submit" id="btn-submit-edit-branch" class="btn btn-primary btn-pill">
+                <span>${icon('Save', 14)} Save Changes</span>
+              </button>
+            </div>
+          </form>
+        </div>
+      </div>
     </div>
   `;
 
@@ -2141,6 +2385,7 @@ export function renderAdminDashboardView(
     | 'event-dashboard'
     | 'users'
     | 'admins'
+    | 'branches'
     | 'uptime-monitor'
     | 'events'
     | 'add-event'
@@ -2154,6 +2399,7 @@ export function renderAdminDashboardView(
   let activeTab: AdminTab = 'daily-dashboard';
   let allUsers: AdminUserRecord[] = [];
   let allAdmins: AdminRecord[] = [];
+  let allBranches: BranchRecord[] = [];
   let allEvents: QuizEvent[] = [];
   let stats: AdminStats | null = null;
 
@@ -2189,6 +2435,7 @@ export function renderAdminDashboardView(
   const tabBtnEventDashboard = container.querySelector<HTMLButtonElement>('#tab-btn-event-dashboard');
   const tabBtnUsers = container.querySelector<HTMLButtonElement>('#tab-btn-users');
   const tabBtnAdmins = container.querySelector<HTMLButtonElement>('#tab-btn-admins');
+  const tabBtnBranches = container.querySelector<HTMLButtonElement>('#tab-btn-branches');
   const tabBtnUptimeMonitor = container.querySelector<HTMLButtonElement>('#tab-btn-uptime-monitor');
   const tabBtnEvents = container.querySelector<HTMLButtonElement>('#tab-btn-events');
   const tabBtnAddEvent = container.querySelector<HTMLButtonElement>('#tab-btn-add-event');
@@ -2204,6 +2451,7 @@ export function renderAdminDashboardView(
   const viewEventDashboardTab = container.querySelector<HTMLElement>('#view-event-dashboard-tab');
   const viewUsersTab = container.querySelector<HTMLElement>('#view-users-tab');
   const viewAdminsTab = container.querySelector<HTMLElement>('#view-admins-tab');
+  const viewBranchesTab = container.querySelector<HTMLElement>('#view-branches-tab');
   const viewUptimeMonitorTab = container.querySelector<HTMLElement>('#view-uptime-monitor-tab');
   const viewEventsTab = container.querySelector<HTMLElement>('#view-events-tab');
   const viewAddEventTab = container.querySelector<HTMLElement>('#view-add-event-tab');
@@ -2294,6 +2542,7 @@ export function renderAdminDashboardView(
       tabBtnEventDashboard,
       tabBtnUsers,
       tabBtnAdmins,
+      tabBtnBranches,
       tabBtnUptimeMonitor,
       tabBtnEvents,
       tabBtnAddEvent,
@@ -2311,6 +2560,7 @@ export function renderAdminDashboardView(
       viewEventDashboardTab,
       viewUsersTab,
       viewAdminsTab,
+      viewBranchesTab,
       viewUptimeMonitorTab,
       viewEventsTab,
       viewAddEventTab,
@@ -2344,6 +2594,11 @@ export function renderAdminDashboardView(
       if (viewAdminsTab) viewAdminsTab.style.display = 'block';
       if (topbarPageLabel) topbarPageLabel.textContent = 'Daily Dashboard / List of Admins';
       renderAdminsTable();
+    } else if (tab === 'branches') {
+      tabBtnBranches?.classList.add('active');
+      if (viewBranchesTab) viewBranchesTab.style.display = 'block';
+      if (topbarPageLabel) topbarPageLabel.textContent = 'Daily Dashboard / Branch Management';
+      fetchAndRenderBranches();
     } else if (tab === 'uptime-monitor') {
       tabBtnUptimeMonitor?.classList.add('active');
       if (viewUptimeMonitorTab) viewUptimeMonitorTab.style.display = 'block';
@@ -2399,6 +2654,7 @@ export function renderAdminDashboardView(
   tabBtnEventDashboard?.addEventListener('click', () => switchTab('event-dashboard'));
   tabBtnUsers?.addEventListener('click', () => switchTab('users'));
   tabBtnAdmins?.addEventListener('click', () => switchTab('admins'));
+  tabBtnBranches?.addEventListener('click', () => switchTab('branches'));
   tabBtnUptimeMonitor?.addEventListener('click', () => switchTab('uptime-monitor'));
   tabBtnEvents?.addEventListener('click', () => switchTab('events'));
   tabBtnAddEvent?.addEventListener('click', () => switchTab('add-event'));
@@ -2553,11 +2809,12 @@ export function renderAdminDashboardView(
     if (syncTime) syncTime.textContent = 'Syncing...';
 
     try {
-      const [usersRes, statsRes, adminsRes, eventsRes] = await Promise.all([
+      const [usersRes, statsRes, adminsRes, eventsRes, branchesRes] = await Promise.all([
         apiGetAdminUsers().catch(e => { console.warn('users fetch error', e); return null; }),
         apiGetAdminStats().catch(e => { console.warn('stats fetch error', e); return null; }),
         apiGetAdminList().catch(e => { console.warn('admins fetch error', e); return null; }),
-        apiGetEvents().catch(e => { console.warn('events fetch error', e); return null; })
+        apiGetEvents().catch(e => { console.warn('events fetch error', e); return null; }),
+        apiGetBranches().catch(e => { console.warn('branches fetch error', e); return null; })
       ]);
 
       if (usersRes?.success && Array.isArray(usersRes.users) && usersRes.users.length > 0) {
@@ -2588,6 +2845,9 @@ export function renderAdminDashboardView(
 
       if (statsRes?.success && statsRes.stats) stats = statsRes.stats;
       if (adminsRes?.success && adminsRes.admins) allAdmins = adminsRes.admins;
+      if (branchesRes?.success && Array.isArray(branchesRes.branches)) {
+        allBranches = branchesRes.branches;
+      }
       if (eventsRes?.success && eventsRes.events) {
         allEvents = eventsRes.events;
         const badgeEvents = container.querySelector('#badge-events-count');
@@ -2595,6 +2855,8 @@ export function renderAdminDashboardView(
       }
 
       updateBadgesAndMetrics();
+      updateAdminBranchFilterOptions();
+
       if (activeTab === 'daily-dashboard') {
         initDailyDashboardModule();
       } else if (activeTab === 'event-dashboard') {
@@ -2603,6 +2865,8 @@ export function renderAdminDashboardView(
         filterAndRenderUsers();
       } else if (activeTab === 'admins') {
         renderAdminsTable();
+      } else if (activeTab === 'branches') {
+        renderBranchesTable();
       } else if (activeTab === 'events') {
         filterAndRenderEvents();
       } else if (activeTab === 'add-event' || activeTab === 'remove-event') {
@@ -2634,8 +2898,11 @@ export function renderAdminDashboardView(
     const usersViewCount = container.querySelector('#users-view-count');
     const adminsViewCount = container.querySelector('#admins-view-count');
 
+    const badgeBranches = container.querySelector('#badge-branches-count');
+
     if (badgeUsers) badgeUsers.textContent = allUsers.length.toString();
     if (badgeAdmins) badgeAdmins.textContent = allAdmins.length.toString();
+    if (badgeBranches) badgeBranches.textContent = allBranches.length.toString();
     if (usersViewCount) usersViewCount.textContent = `${allUsers.length} Registered`;
     if (adminsViewCount) adminsViewCount.textContent = `${allAdmins.length} Admins`;
 
@@ -2647,7 +2914,7 @@ export function renderAdminDashboardView(
     const totalUsers = stats ? stats.totalUsers : allUsers.length;
     const totalXp = stats ? stats.totalXp : allUsers.reduce((acc, u) => acc + (u.xp || 0), 0);
     const totalAttempts = stats ? stats.totalAttempts : 5;
-    const topBranch = stats?.topBranch ? stats.topBranch.split(' ')[0] : 'CSE';
+    const topBranch = stats?.topBranch ? stats.topBranch : (allBranches[0]?.name || 'All Branches Active');
 
     if (usersVal) usersVal.textContent = totalUsers.toLocaleString();
     if (xpVal) xpVal.innerHTML = `${icon('Zap', 15)} ${totalXp.toLocaleString()}`;
@@ -3158,6 +3425,398 @@ export function renderAdminDashboardView(
     link.click();
     link.remove();
     showToast('Exported administrators to CSV', 'success');
+  }
+
+  // =========================================================================
+  // TAB: BRANCH MANAGEMENT CONTROLLER (SUPER ADMIN & ADMIN)
+  // =========================================================================
+
+  const branchesSearchInput = container.querySelector<HTMLInputElement>('#branches-search-input');
+  const branchesSortSelect = container.querySelector<HTMLSelectElement>('#branches-sort-by');
+  const btnBranchesRefresh = container.querySelector<HTMLButtonElement>('#btn-branches-refresh');
+
+  const addBranchModal = container.querySelector<HTMLElement>('#admin-add-branch-modal');
+  const btnOpenAddBranch = container.querySelector<HTMLButtonElement>('#btn-open-add-branch-modal');
+  const btnCloseAddBranchModal = container.querySelector<HTMLButtonElement>('#btn-close-add-branch-modal');
+  const btnCancelAddBranch = container.querySelector<HTMLButtonElement>('#btn-cancel-add-branch');
+  const formAddBranch = container.querySelector<HTMLFormElement>('#form-add-branch');
+
+  const editBranchModal = container.querySelector<HTMLElement>('#admin-edit-branch-modal');
+  const btnCloseEditBranchModal = container.querySelector<HTMLButtonElement>('#btn-close-edit-branch-modal');
+  const btnCancelEditBranch = container.querySelector<HTMLButtonElement>('#btn-cancel-edit-branch');
+  const formEditBranch = container.querySelector<HTMLFormElement>('#form-edit-branch');
+
+  // Search & Filter listeners
+  branchesSearchInput?.addEventListener('input', () => renderBranchesTable());
+  branchesSortSelect?.addEventListener('change', () => renderBranchesTable());
+  btnBranchesRefresh?.addEventListener('click', () => {
+    soundEngine.playClick();
+    fetchAndRenderBranches();
+  });
+
+  // Open & Close Add Branch Modal
+  const openAddBranchModal = () => {
+    soundEngine.playClick();
+    if (addBranchModal) {
+      formAddBranch?.reset();
+      addBranchModal.style.display = 'flex';
+      container.querySelector<HTMLInputElement>('#add-branch-name')?.focus();
+    }
+  };
+
+  const closeAddBranchModal = () => {
+    if (addBranchModal) addBranchModal.style.display = 'none';
+  };
+
+  btnOpenAddBranch?.addEventListener('click', openAddBranchModal);
+  btnCloseAddBranchModal?.addEventListener('click', closeAddBranchModal);
+  btnCancelAddBranch?.addEventListener('click', closeAddBranchModal);
+  addBranchModal?.addEventListener('click', (e) => {
+    if (e.target === addBranchModal) closeAddBranchModal();
+  });
+
+  // Open & Close Edit Branch Modal
+  const openEditBranchModal = (branch: BranchRecord) => {
+    soundEngine.playClick();
+    if (editBranchModal) {
+      const idInput = container.querySelector<HTMLInputElement>('#edit-branch-id');
+      const nameInput = container.querySelector<HTMLInputElement>('#edit-branch-name');
+      const codeInput = container.querySelector<HTMLInputElement>('#edit-branch-code');
+      const descInput = container.querySelector<HTMLTextAreaElement>('#edit-branch-desc');
+
+      if (idInput) idInput.value = branch.id;
+      if (nameInput) nameInput.value = branch.name;
+      if (codeInput) codeInput.value = branch.code || '';
+      if (descInput) descInput.value = branch.description || '';
+
+      editBranchModal.style.display = 'flex';
+      nameInput?.focus();
+    }
+  };
+
+  const closeEditBranchModal = () => {
+    if (editBranchModal) editBranchModal.style.display = 'none';
+  };
+
+  btnCloseEditBranchModal?.addEventListener('click', closeEditBranchModal);
+  btnCancelEditBranch?.addEventListener('click', closeEditBranchModal);
+  editBranchModal?.addEventListener('click', (e) => {
+    if (e.target === editBranchModal) closeEditBranchModal();
+  });
+
+  // Add Branch Form Submission
+  formAddBranch?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nameInput = container.querySelector<HTMLInputElement>('#add-branch-name');
+    const codeInput = container.querySelector<HTMLInputElement>('#add-branch-code');
+    const descInput = container.querySelector<HTMLTextAreaElement>('#add-branch-desc');
+    const submitBtn = container.querySelector<HTMLButtonElement>('#btn-submit-add-branch');
+
+    const name = nameInput?.value.trim() || '';
+    const code = codeInput?.value.trim().toUpperCase() || '';
+    const description = descInput?.value.trim() || '';
+
+    if (!name || name.length < 2) {
+      showToast('Branch name must be at least 2 characters.', 'warn');
+      nameInput?.focus();
+      return;
+    }
+
+    const origBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Saving to Turso DB...</span>';
+    }
+
+    try {
+      const res = await apiAddBranch({ name, code, description });
+      if (res.success && res.branch) {
+        soundEngine.playCorrect();
+        showToast(`Branch "${name}" created successfully in Turso DB!`, 'success');
+        closeAddBranchModal();
+        await fetchAndRenderBranches();
+      } else {
+        showToast(res.error || 'Failed to add branch.', 'warn');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Network error adding branch.', 'warn');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origBtnHtml;
+      }
+    }
+  });
+
+  // Edit Branch Form Submission
+  formEditBranch?.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const idInput = container.querySelector<HTMLInputElement>('#edit-branch-id');
+    const nameInput = container.querySelector<HTMLInputElement>('#edit-branch-name');
+    const codeInput = container.querySelector<HTMLInputElement>('#edit-branch-code');
+    const descInput = container.querySelector<HTMLTextAreaElement>('#edit-branch-desc');
+    const submitBtn = container.querySelector<HTMLButtonElement>('#btn-submit-edit-branch');
+
+    const id = idInput?.value || '';
+    const name = nameInput?.value.trim() || '';
+    const code = codeInput?.value.trim().toUpperCase() || '';
+    const description = descInput?.value.trim() || '';
+
+    if (!id) return;
+    if (!name || name.length < 2) {
+      showToast('Branch name must be at least 2 characters.', 'warn');
+      nameInput?.focus();
+      return;
+    }
+
+    const origBtnHtml = submitBtn ? submitBtn.innerHTML : '';
+    if (submitBtn) {
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = '<span>Updating database...</span>';
+    }
+
+    try {
+      const res = await apiUpdateBranch(id, { name, code, description });
+      if (res.success && res.branch) {
+        soundEngine.playCorrect();
+        showToast(`Branch "${name}" updated successfully in database!`, 'success');
+        closeEditBranchModal();
+        await fetchAndRenderBranches();
+        if (activeTab === 'users') {
+          filterAndRenderUsers();
+        }
+      } else {
+        showToast(res.error || 'Failed to update branch.', 'warn');
+      }
+    } catch (err) {
+      console.error(err);
+      showToast('Network error updating branch.', 'warn');
+    } finally {
+      if (submitBtn) {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = origBtnHtml;
+      }
+    }
+  });
+
+  // Fetch branches from Turso DB and update UI
+  async function fetchAndRenderBranches() {
+    try {
+      const res = await apiGetBranches();
+      if (res && res.success && Array.isArray(res.branches)) {
+        allBranches = res.branches;
+      }
+    } catch (err) {
+      console.error('Failed to fetch branches from API:', err);
+    }
+
+    // Update badges & metrics
+    const badgeBranches = container.querySelector('#badge-branches-count');
+    const branchesViewCount = container.querySelector('#branches-view-count');
+    const metricTotalBranches = container.querySelector('#metric-total-branches');
+    const metricBranchStudents = container.querySelector('#metric-branch-students');
+    const metricBranchLeading = container.querySelector('#metric-branch-leading');
+
+    if (badgeBranches) badgeBranches.textContent = allBranches.length.toString();
+    if (branchesViewCount) branchesViewCount.textContent = `${allBranches.length} Disciplines`;
+    if (metricTotalBranches) metricTotalBranches.textContent = allBranches.length.toString();
+
+    const totalStudents = allBranches.reduce((sum, b) => sum + (b.studentCount || 0), 0);
+    if (metricBranchStudents) metricBranchStudents.textContent = totalStudents.toLocaleString();
+
+    let topBranch = '—';
+    if (allBranches.length > 0) {
+      const sortedByCount = [...allBranches].sort((a, b) => (b.studentCount || 0) - (a.studentCount || 0));
+      const top = sortedByCount[0];
+      if (top && (top.studentCount || 0) > 0) {
+        topBranch = top.code ? `${top.code} (${top.studentCount})` : `${top.name} (${top.studentCount})`;
+      } else if (top) {
+        topBranch = top.code || top.name;
+      }
+    }
+    if (metricBranchLeading) metricBranchLeading.textContent = topBranch;
+
+    // Dynamically update branch filter in Users Directory
+    updateAdminBranchFilterOptions();
+
+    // Render branch table
+    renderBranchesTable();
+  }
+
+  // Update dynamic branch filter dropdown in Users Directory
+  function updateAdminBranchFilterOptions() {
+    if (!branchFilter) return;
+    const currentVal = branchFilter.value;
+    branchFilter.innerHTML = `<option value="ALL">All Branches</option>` +
+      allBranches.map(b => {
+        const label = b.code ? `${b.name} (${b.code})` : b.name;
+        return `<option value="${escapeHtml(b.name)}">${escapeHtml(label)}</option>`;
+      }).join('');
+
+    // Restore selected value if still existing
+    if (currentVal && (currentVal === 'ALL' || allBranches.some(b => b.name === currentVal))) {
+      branchFilter.value = currentVal;
+    }
+  }
+
+  // Render Branches Table
+  function renderBranchesTable() {
+    const tbody = container.querySelector('#branch-list-tbody');
+    const countLabel = container.querySelector('#branches-count-label');
+    if (!tbody) return;
+
+    const query = branchesSearchInput?.value.trim().toLowerCase() || '';
+    const sortBy = branchesSortSelect?.value || 'name-asc';
+
+    let filtered = allBranches.filter(b => {
+      if (!query) return true;
+      return (
+        b.name.toLowerCase().includes(query) ||
+        (b.code && b.code.toLowerCase().includes(query)) ||
+        (b.description && b.description.toLowerCase().includes(query))
+      );
+    });
+
+    filtered.sort((a, b) => {
+      if (sortBy === 'name-asc') return a.name.localeCompare(b.name);
+      if (sortBy === 'name-desc') return b.name.localeCompare(a.name);
+      if (sortBy === 'students-desc') return (b.studentCount || 0) - (a.studentCount || 0);
+      if (sortBy === 'newest') return new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime();
+      return 0;
+    });
+
+    if (countLabel) {
+      countLabel.textContent = `Showing ${filtered.length} of ${allBranches.length} active engineering disciplines`;
+    }
+
+    if (filtered.length === 0) {
+      tbody.innerHTML = `
+        <tr>
+          <td colspan="5" style="text-align: center; padding: 4rem 2rem;">
+            <div class="empty-state-wrap">
+              <span class="empty-state-icon" style="display: block; margin-bottom: 0.5rem; color: var(--text-muted);">${icon('GraduationCap', 36)}</span>
+              <h3 style="font-size: 1.15rem; color: var(--text-main); margin-bottom: 0.4rem;">No matching branches found</h3>
+              <p style="color: var(--text-muted); font-size: 0.9rem; max-width: 420px; margin: 0 auto;">
+                ${query ? `No disciplines match "${escapeHtml(query)}". Try a different search term.` : 'No engineering disciplines configured. Click "Add New Branch" to add one.'}
+              </p>
+            </div>
+          </td>
+        </tr>
+      `;
+      return;
+    }
+
+    tbody.innerHTML = filtered.map(b => {
+      const codePill = b.code
+        ? `<span class="count-pill-modern" style="background: #e0f2fe; color: #0369a1; border-color: #bae6fd; font-weight: 800; font-size: 0.75rem; letter-spacing: 0.05em;">${escapeHtml(b.code)}</span>`
+        : `<span style="color: var(--text-muted); font-size: 0.85rem;">—</span>`;
+
+      const studentCountBadge = (b.studentCount || 0) > 0
+        ? `<span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: 999px; background: #ecfeff; color: #0e7490; font-weight: 800; font-size: 0.82rem; border: 1px solid #cffafe;">${icon('Users', 12)} ${b.studentCount.toLocaleString()}</span>`
+        : `<span style="display: inline-flex; align-items: center; gap: 0.35rem; padding: 0.25rem 0.65rem; border-radius: 999px; background: #f8fafc; color: #94a3b8; font-weight: 600; font-size: 0.82rem; border: 1px solid #e2e8f0;">0 students</span>`;
+
+      return `
+        <tr data-branch-id="${b.id}">
+          <td>
+            <div style="display: flex; align-items: center; gap: 0.75rem;">
+              <div style="width: 38px; height: 38px; border-radius: 10px; background: #eef2ff; color: #4f46e5; display: flex; align-items: center; justify-content: center; flex-shrink: 0; border: 1.5px solid #e0e7ff;">
+                ${icon('GraduationCap', 18)}
+              </div>
+              <div>
+                <div style="font-weight: 800; color: var(--text-main); font-size: 0.95rem;">${escapeHtml(b.name)}</div>
+                <div style="font-size: 0.76rem; color: var(--text-muted); margin-top: 2px;">ID: <code>${escapeHtml(b.id)}</code></div>
+              </div>
+            </div>
+          </td>
+          <td>${codePill}</td>
+          <td>
+            <span style="font-size: 0.85rem; color: #475569; display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical; overflow: hidden; line-height: 1.4;">
+              ${escapeHtml(b.description || 'Standard Engineering Curriculum & Training')}
+            </span>
+          </td>
+          <td style="text-align: center;">${studentCountBadge}</td>
+          <td style="text-align: right;">
+            <div class="admin-row-actions">
+              <button class="btn-action-view btn-branch-edit" data-id="${b.id}" title="Edit ${escapeHtml(b.name)}">
+                ${icon('Edit3', 13)} Edit
+              </button>
+              <button class="btn-action-delete btn-branch-delete" data-id="${b.id}" data-name="${escapeHtml(b.name)}" data-count="${b.studentCount || 0}" title="Delete ${escapeHtml(b.name)}">
+                ${icon('Trash2', 13)} Delete
+              </button>
+            </div>
+          </td>
+        </tr>
+      `;
+    }).join('');
+
+    // Attach Edit button listeners
+    tbody.querySelectorAll<HTMLButtonElement>('.btn-branch-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const id = btn.getAttribute('data-id');
+        const branch = allBranches.find(b => b.id === id);
+        if (branch) {
+          openEditBranchModal(branch);
+        }
+      });
+    });
+
+    // Attach Delete button listeners with confirmation and validation
+    tbody.querySelectorAll<HTMLButtonElement>('.btn-branch-delete').forEach(btn => {
+      btn.addEventListener('click', async () => {
+        const id = btn.getAttribute('data-id');
+        const name = btn.getAttribute('data-name') || 'this branch';
+        const studentCount = Number(btn.getAttribute('data-count') || 0);
+
+        if (!id) return;
+
+        // Validation: Platform must have at least one branch
+        if (allBranches.length <= 1) {
+          showToast('Cannot delete the only remaining branch. The platform requires at least one active discipline.', 'warn');
+          return;
+        }
+
+        let confirmMsg = `Are you sure you want to permanently delete the "${name}" branch from Turso DB?`;
+        if (studentCount > 0) {
+          confirmMsg = `Branch "${name}" currently has ${studentCount} enrolled student account(s).\n\nIf you proceed, these students will be safely reallocated to another active discipline so no user records or quiz attempts are lost.\n\nAre you sure you want to delete this branch?`;
+        }
+
+        const confirmed = await showConfirmDialog({
+          title: 'Delete Engineering Branch',
+          message: confirmMsg,
+          confirmText: studentCount > 0 ? 'Yes, Delete & Reallocate' : 'Delete Branch',
+          cancelText: 'Cancel',
+          type: 'danger'
+        });
+
+        if (confirmed) {
+          soundEngine.playClick();
+          btn.disabled = true;
+          btn.textContent = 'Deleting...';
+
+          try {
+            const res = await apiDeleteBranch(id);
+            if (res.success) {
+              soundEngine.playCorrect();
+              showToast(res.message || `Branch "${name}" deleted.`, 'info');
+              await fetchAndRenderBranches();
+              if (activeTab === 'users') {
+                filterAndRenderUsers();
+              }
+            } else {
+              showToast(res.error || 'Failed to delete branch.', 'warn');
+              btn.disabled = false;
+              btn.innerHTML = `${icon('Trash2', 13)} Delete`;
+            }
+          } catch (err) {
+            console.error(err);
+            showToast('Network error deleting branch.', 'warn');
+            btn.disabled = false;
+            btn.innerHTML = `${icon('Trash2', 13)} Delete`;
+          }
+        }
+      });
+    });
   }
 
   // =========================================================================

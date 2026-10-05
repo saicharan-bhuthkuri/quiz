@@ -4,6 +4,7 @@ import { showToast } from '../components/Toast.ts';
 import { saveUserSession } from '../auth.ts';
 import { registerUserToTurso } from '../db/turso.ts';
 import { icon } from '../components/Icons.ts';
+import { apiGetBranches } from '../api/client.ts';
 
 const DEFAULT_AVATARS = [
   'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&w=120&q=80',
@@ -124,16 +125,7 @@ export function renderRegisterView(
                   <div class="input-wrapper">
                     <span class="input-icon">${icon('GraduationCap', 16)}</span>
                     <select id="ts-reg-branch" class="auth-input auth-select" required>
-                      <option value="" disabled selected>Select Branch</option>
-                      <option value="Computer Science (CSE)">Computer Science (CSE)</option>
-                      <option value="Information Technology (IT)">Information Technology (IT)</option>
-                      <option value="AI & Data Science (AI/DS)">AI & Data Science (AI/DS)</option>
-                      <option value="Electronics & Communication (ECE)">Electronics & Comm (ECE)</option>
-                      <option value="Electrical & Electronics (EEE)">Electrical & Electronics (EEE)</option>
-                      <option value="Mechanical Engineering (ME)">Mechanical Engineering (ME)</option>
-                      <option value="Civil Engineering (CE)">Civil Engineering (CE)</option>
-                      <option value="Aerospace Engineering">Aerospace Engineering</option>
-                      <option value="Other Engineering">Other Engineering</option>
+                      <option value="" disabled selected>Loading branches...</option>
                     </select>
                   </div>
                 </div>
@@ -272,6 +264,33 @@ export function renderRegisterView(
     });
   }
 
+  // Load dynamic branches from backend / database
+  const branchSelect = container.querySelector<HTMLSelectElement>('#ts-reg-branch');
+  const loadDynamicBranches = async () => {
+    try {
+      const res = await apiGetBranches();
+      if (branchSelect) {
+        if (res && res.success && Array.isArray(res.branches) && res.branches.length > 0) {
+          branchSelect.innerHTML = `<option value="" disabled selected>Select Branch</option>` +
+            res.branches.map(b => {
+              const label = b.code ? `${b.name} (${b.code})` : b.name;
+              return `<option value="${b.name}">${label}</option>`;
+            }).join('');
+        } else {
+          branchSelect.innerHTML = `<option value="" disabled selected>Select Branch</option>
+            <option value="General Engineering">General Engineering</option>`;
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load branches dynamically:', err);
+      if (branchSelect) {
+        branchSelect.innerHTML = `<option value="" disabled selected>Select Branch</option>
+          <option value="General Engineering">General Engineering</option>`;
+      }
+    }
+  };
+  loadDynamicBranches();
+
   // Form Submit
   const form = container.querySelector<HTMLFormElement>('#ts-register-form');
   form?.addEventListener('submit', async (e) => {
@@ -279,7 +298,6 @@ export function renderRegisterView(
     const nameInput = container.querySelector<HTMLInputElement>('#ts-reg-name');
     const emailInput = container.querySelector<HTMLInputElement>('#ts-reg-email');
     const mobileInput = container.querySelector<HTMLInputElement>('#ts-reg-mobile');
-    const branchSelect = container.querySelector<HTMLSelectElement>('#ts-reg-branch');
     const yearSelect = container.querySelector<HTMLSelectElement>('#ts-reg-year');
     const terms = container.querySelector<HTMLInputElement>('#ts-reg-terms');
     const submitBtn = container.querySelector<HTMLButtonElement>('#btn-ts-submit-reg');

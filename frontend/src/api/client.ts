@@ -32,6 +32,15 @@ export interface AdminStats {
   topBranch: string;
 }
 
+export interface BranchRecord {
+  id: string;
+  name: string;
+  code: string;
+  description: string;
+  studentCount: number;
+  createdAt: string;
+}
+
 export async function apiRegister(data: {
   name: string;
   email: string;
@@ -622,6 +631,58 @@ export async function apiGetPricingPlans(): Promise<{
   const res = await fetch(`${API_BASE}/pricing?t=${Date.now()}`);
   return res.json();
 }
+
+/* ==========================================================================
+   DYNAMIC BRANCH MANAGEMENT APIS
+   ========================================================================== */
+
+export async function apiGetBranches(): Promise<{ success: boolean; branches: BranchRecord[]; count: number }> {
+  const res = await fetch(`${API_BASE}/branches?t=${Date.now()}`);
+  return res.json();
+}
+
+export async function apiAddBranch(data: {
+  name: string;
+  code?: string;
+  description?: string;
+}): Promise<{ success: boolean; message?: string; error?: string; branch?: BranchRecord }> {
+  const res = await fetch(`${API_BASE}/admin/branches`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function apiUpdateBranch(
+  id: string,
+  data: {
+    name: string;
+    code?: string;
+    description?: string;
+  }
+): Promise<{ success: boolean; message?: string; error?: string; branch?: BranchRecord }> {
+  const res = await fetch(`${API_BASE}/admin/branches/${id}`, {
+    method: 'PUT',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(data),
+  });
+  return res.json();
+}
+
+export async function apiDeleteBranch(id: string): Promise<{
+  success: boolean;
+  message?: string;
+  error?: string;
+  reassignedCount?: number;
+  reassignedTo?: string;
+}> {
+  const res = await fetch(`${API_BASE}/admin/branches/${id}`, {
+    method: 'DELETE',
+  });
+  return res.json();
+}
+
 
 
 

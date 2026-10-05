@@ -854,6 +854,254 @@ app.delete('/api/admin/remove/:id', async (req: Request, res: Response) => {
   }
 });
 
+/* ==========================================================================
+   DYNAMIC BRANCH MANAGEMENT APIS (SUPERADMIN & ADMIN)
+   ========================================================================== */
+
+// 1. Get all branches with dynamic student enrollment counts
+app.get('/api/branches', async (_req: Request, res: Response) => {
+  try {
+    const result = await db.execute(`
+      SELECT b.id, b.name, b.code, b.description, b.created_at,
+        (
+          SELECT COUNT(*) 
+          FROM users u 
+          WHERE LOWER(TRIM(u.branch)) = LOWER(TRIM(b.name)) 
+             OR (b.code IS NOT NULL AND b.code != '' AND LOWER(TRIM(u.branch)) = LOWER(TRIM(b.code)))
+             OR LOWER(TRIM(u.branch)) LIKE LOWER('%' || TRIM(b.name) || '%')
+        ) as student_count
+      FROM branches b
+      ORDER BY b.name ASC;
+    `);
+
+    const branches = result.rows.map(row => ({
+      id: String(row.id),
+      name: String(row.name),
+      code: String(row.code || ''),
+      description: String(row.description || ''),
+      studentCount: Number(row.student_count || 0),
+      createdAt: String(row.created_at || '')
+    }));
+
+    return res.json({ success: true, count: branches.length, branches });
+  } catch (error: any) {
+    console.error('Fetch branches error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to fetch branches from database' });
+  }
+});
+
+// 2. Add new branch (Super Admin & Admin)
+app.post('/api/admin/branches', async (req: Request, res: Response) => {
+  try {
+    const { name, code, description } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+      return res.status(400).json({ error: 'Branch name must be at least 2 characters long' });
+    }
+
+    const cleanName = name.trim();
+    const cleanCode = code ? String(code).trim().toUpperCase() : '';
+    const cleanDesc = description ? String(description).trim() : '';
+
+    // Check duplicate name or code
+    const existing = await db.execute({
+      sql: `SELECT id, name FROM branches 
+            WHERE LOWER(name) = LOWER(?) 
+               OR (? != '' AND code IS NOT NULL AND code != '' AND LOWER(code) = LOWER(?)) 
+            LIMIT 1;`,
+      args: [cleanName, cleanCode, cleanCode]
+    });
+
+    if (existing.rows.length > 0) {
+      return res.status(409).json({ error: `A branch with name "${cleanName}" or code "${cleanCode}" already exists` });
+    }
+
+    const branchId = 'br_' + Math.random().toString(36).substring(2, 10);
+
+    await db.execute({
+      sql: `INSERT INTO branches (id, name, code, description, created_at)
+            VALUES (?, ?, ?, ?, datetime('now'));`,
+      args: [branchId, cleanName, cleanCode, cleanDesc]
+    });
+
+    return res.status(201).json({
+      success: true,
+      message: `Branch "${cleanName}" created successfully`,
+      branch: {
+        id: branchId,
+        name: cleanName,
+        code: cleanCode,
+        description: cleanDesc,
+        studentCount: 0,
+        createdAt: new Date().toISOString()
+      }
+    });
+  } catch (error: any) {
+    console.error('Create branch error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to create branch in database' });
+  }
+});
+
+// 3. Edit branch (Super Admin & Admin)
+app.put('/api/admin/branches/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { name, code, description } = req.body;
+
+    if (!name || typeof name !== 'string' || name.trim().length < 2) {
+      return res.status(400).json({ error: 'Branch name must be at least 2 characters long' });
+    }
+
+    const cleanName = name.trim();
+    const cleanCode = code ? String(code).trim().toUpperCase() : '';
+    const cleanDesc = description ? String(description).trim() : '';
+
+    // Check if branch exists
+    const currentBranchRes = await db.execute({
+      sql: 'SELECT id, name, code FROM branches WHERE id = ? LIMIT 1;',
+      args: [id]
+    });
+
+    if (currentBranchRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Branch not found' });
+    }
+
+    const oldName = String(currentBranchRes.rows[0].name);
+    const oldCode = String(currentBranchRes.rows[0].code || '');
+
+    // Check uniqueness excluding current branch
+    const duplicateCheck = await db.execute({
+      sql: `SELECT id FROM branches 
+            WHERE id != ? 
+              AND (LOWER(name) = LOWER(?) OR (? != '' AND code IS NOT NULL AND code != '' AND LOWER(code) = LOWER(?))) 
+            LIMIT 1;`,
+      args: [id, cleanName, cleanCode, cleanCode]
+    });
+
+    if (duplicateCheck.rows.length > 0) {
+      return res.status(409).json({ error: `Another branch with name "${cleanName}" or code "${cleanCode}" already exists` });
+    }
+
+    // Update branch record
+    await db.execute({
+      sql: 'UPDATE branches SET name = ?, code = ?, description = ? WHERE id = ?;',
+      args: [cleanName, cleanCode, cleanDesc, id]
+    });
+
+    // Cascade update users currently assigned to this branch
+    if (oldName !== cleanName || oldCode !== cleanCode) {
+      await db.execute({
+        sql: `UPDATE users 
+              SET branch = ? 
+              WHERE LOWER(TRIM(branch)) = LOWER(?) 
+                 OR ( ? != '' AND LOWER(TRIM(branch)) = LOWER(?) );`,
+        args: [cleanName, oldName, oldCode, oldCode]
+      });
+    }
+
+    // Get updated student count
+    const countRes = await db.execute({
+      sql: `SELECT COUNT(*) as student_count FROM users 
+            WHERE LOWER(TRIM(branch)) = LOWER(?) 
+               OR (? != '' AND LOWER(TRIM(branch)) = LOWER(?));`,
+      args: [cleanName, cleanCode, cleanCode]
+    });
+
+    return res.json({
+      success: true,
+      message: `Branch "${cleanName}" updated successfully`,
+      branch: {
+        id,
+        name: cleanName,
+        code: cleanCode,
+        description: cleanDesc,
+        studentCount: Number(countRes.rows[0]?.student_count || 0),
+        createdAt: String(currentBranchRes.rows[0].created_at || '')
+      }
+    });
+  } catch (error: any) {
+    console.error('Update branch error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to update branch' });
+  }
+});
+
+// 4. Delete branch with confirmation and validation (Super Admin & Admin)
+app.delete('/api/admin/branches/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+
+    const currentBranchRes = await db.execute({
+      sql: 'SELECT id, name, code FROM branches WHERE id = ? LIMIT 1;',
+      args: [id]
+    });
+
+    if (currentBranchRes.rows.length === 0) {
+      return res.status(404).json({ error: 'Branch not found' });
+    }
+
+    const branchName = String(currentBranchRes.rows[0].name);
+    const branchCode = String(currentBranchRes.rows[0].code || '');
+
+    // Validation: Check total remaining branches
+    const totalCountRes = await db.execute('SELECT COUNT(*) as count FROM branches;');
+    const totalBranches = Number(totalCountRes.rows[0]?.count || 0);
+    if (totalBranches <= 1) {
+      return res.status(400).json({
+        error: 'Cannot delete the only remaining branch. The platform requires at least one engineering branch.'
+      });
+    }
+
+    // Check how many students are enrolled under this branch
+    const enrolledStudentsRes = await db.execute({
+      sql: `SELECT COUNT(*) as count FROM users 
+            WHERE LOWER(TRIM(branch)) = LOWER(?) 
+               OR (? != '' AND LOWER(TRIM(branch)) = LOWER(?))
+               OR LOWER(TRIM(branch)) LIKE LOWER('%' || TRIM(?) || '%');`,
+      args: [branchName, branchCode, branchCode, branchName]
+    });
+
+    const enrolledCount = Number(enrolledStudentsRes.rows[0]?.count || 0);
+
+    // Find fallback target branch to reassign existing students so records are safe
+    let fallbackBranchName = 'Other Engineering Disciplines';
+    const otherBranchRes = await db.execute({
+      sql: 'SELECT name FROM branches WHERE id != ? ORDER BY name ASC LIMIT 1;',
+      args: [id]
+    });
+    if (otherBranchRes.rows.length > 0) {
+      fallbackBranchName = String(otherBranchRes.rows[0].name);
+    }
+
+    if (enrolledCount > 0) {
+      // Reassign enrolled students safely to the fallback branch
+      await db.execute({
+        sql: `UPDATE users 
+              SET branch = ? 
+              WHERE LOWER(TRIM(branch)) = LOWER(?) 
+                 OR (? != '' AND LOWER(TRIM(branch)) = LOWER(?))
+                 OR LOWER(TRIM(branch)) LIKE LOWER('%' || TRIM(?) || '%');`,
+        args: [fallbackBranchName, branchName, branchCode, branchCode, branchName]
+      });
+    }
+
+    // Delete branch record from database
+    await db.execute({
+      sql: 'DELETE FROM branches WHERE id = ?;',
+      args: [id]
+    });
+
+    return res.json({
+      success: true,
+      message: `Branch "${branchName}" removed successfully. ${enrolledCount > 0 ? `${enrolledCount} enrolled student(s) safely reallocated to "${fallbackBranchName}".` : 'No enrolled students were affected.'}`,
+      reassignedCount: enrolledCount,
+      reassignedTo: fallbackBranchName
+    });
+  } catch (error: any) {
+    console.error('Delete branch error:', error);
+    return res.status(500).json({ error: error.message || 'Failed to remove branch' });
+  }
+});
+
 // Seed sample users into Turso DB (disabled)
 app.post('/api/admin/seed', async (_req: Request, res: Response) => {
   res.json({ success: false, message: 'Sample user seeding has been permanently disabled' });
@@ -923,7 +1171,15 @@ app.get('/api/admin/stats', async (_req: Request, res: Response) => {
     const totalUsers = Number(usersCountRes.rows[0]?.total_users || 0);
     const totalXp = Number(totalXpRes.rows[0]?.total_xp || 0);
     const totalAttempts = Number(attemptsCountRes.rows[0]?.total_attempts || 0);
-    const topBranch = branchRes.rows[0]?.branch ? String(branchRes.rows[0]?.branch) : 'Computer Science (CSE)';
+    let topBranch = 'All Disciplines Active';
+    if (branchRes.rows[0]?.branch) {
+      topBranch = String(branchRes.rows[0]?.branch);
+    } else {
+      const firstBranch = await db.execute('SELECT name FROM branches ORDER BY name ASC LIMIT 1;');
+      if (firstBranch.rows.length > 0 && firstBranch.rows[0]?.name) {
+        topBranch = String(firstBranch.rows[0].name);
+      }
+    }
 
     res.json({
       success: true,

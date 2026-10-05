@@ -137,10 +137,53 @@ export async function initDatabase() {
       );
     `);
 
+    await db.execute(`
+      CREATE TABLE IF NOT EXISTS branches (
+        id TEXT PRIMARY KEY,
+        name TEXT UNIQUE NOT NULL,
+        code TEXT,
+        description TEXT,
+        created_at TEXT DEFAULT CURRENT_TIMESTAMP
+      );
+    `);
+
     console.log('[Turso DB] Database tables initialized successfully in Backend');
     await ensureSuperAdminExists();
+    await seedInitialBranchesIfEmpty();
   } catch (error) {
     console.error('[Turso DB] Failed to initialize Turso database:', error);
+  }
+}
+
+export async function seedInitialBranchesIfEmpty() {
+  try {
+    const existing = await db.execute('SELECT COUNT(*) as count FROM branches;');
+    const count = Number(existing.rows[0]?.count || 0);
+    if (count === 0) {
+      console.log('[Turso DB] Seeding initial engineering branches...');
+      const initialBranches = [
+        { id: 'br_cse', name: 'Computer Science and Engineering', code: 'CSE', description: 'Core Computing, Software Systems, Web Development & Algorithms' },
+        { id: 'br_it', name: 'Information Technology', code: 'IT', description: 'Information Systems, Cloud Infrastructure & Network Architecture' },
+        { id: 'br_aids', name: 'Artificial Intelligence & Data Science', code: 'AI/DS', description: 'Machine Learning, Deep Neural Networks & Big Data Analytics' },
+        { id: 'br_ece', name: 'Electronics and Communication Engineering', code: 'ECE', description: 'VLSI, Digital Signal Processing, Microcontrollers & Telecommunication' },
+        { id: 'br_eee', name: 'Electrical and Electronics Engineering', code: 'EEE', description: 'Power Electronics, Electrical Drives, Renewable Energy & Control Systems' },
+        { id: 'br_me', name: 'Mechanical Engineering', code: 'ME', description: 'Thermodynamics, Robotics, CAD/CAM, Manufacturing & Mechatronics' },
+        { id: 'br_ce', name: 'Civil Engineering', code: 'CE', description: 'Structural Engineering, Geo-technical, Construction & Urban Planning' },
+        { id: 'br_aero', name: 'Aeronautical Engineering', code: 'AERO', description: 'Aerodynamics, Avionics, Propulsion & Spaceflight Engineering' },
+        { id: 'br_other', name: 'Other Engineering Disciplines', code: 'OTHER', description: 'Biotechnology, Chemical, Materials & Interdisciplinary Engineering' }
+      ];
+
+      for (const br of initialBranches) {
+        await db.execute({
+          sql: `INSERT OR IGNORE INTO branches (id, name, code, description, created_at)
+                VALUES (?, ?, ?, ?, datetime('now'));`,
+          args: [br.id, br.name, br.code, br.description]
+        });
+      }
+      console.log('[Turso DB] Initial engineering branches seeded successfully.');
+    }
+  } catch (error) {
+    console.error('[Turso DB] Error checking or seeding branches:', error);
   }
 }
 
